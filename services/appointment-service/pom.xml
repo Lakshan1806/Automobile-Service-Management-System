@@ -11,8 +11,8 @@
     <groupId>com.nivethan</groupId>
     <artifactId>ead</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>appoinment-service</name>
-    <description>appoinment-service</description>
+    <name>appointment-service</name>
+    <description>appointment-service</description>
     <url/>
     <licenses>
         <license/>
@@ -38,13 +38,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <!--Dot Env Dependency-->
-        <dependency>
-            <groupId>io.github.cdimascio</groupId>
-            <artifactId>dotenv-java</artifactId>
-            <version>2.3.2</version>
-        </dependency>
-
 
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -55,6 +48,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <!--Dot Env Dependency-->
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>dotenv-java</artifactId>
+            <version>2.3.2</version>
         </dependency>
     </dependencies>
 
