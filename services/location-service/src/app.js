@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import locationRoutes from "./routes/v1/locationRoute.js";
 
 const app = express();
 
@@ -10,5 +11,7 @@ app.use(
   })
 );
 app.use(express.json());
+
+app.use("/location", locationRoutes);
 
 export default app;
