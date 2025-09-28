@@ -3,7 +3,7 @@ import locationController from "../../controllers/locationController.js";
 
 const locationRoutes = express.Router();
 
-//locationRoutes.post("/", );
+locationRoutes.post("/location", locationController.updateLocation);
 //locationRoutes.get("/", );
 
 export default locationRoutes;

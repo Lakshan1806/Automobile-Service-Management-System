@@ -12,6 +12,6 @@ app.use(
 );
 app.use(express.json());
 
-app.use("/location", locationRoutes);
+app.use("/api", locationRoutes);
 
 export default app;
