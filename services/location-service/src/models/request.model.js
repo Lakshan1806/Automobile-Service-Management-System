@@ -9,8 +9,8 @@ const RequestSchema = new mongoose.Schema(
       enum: ["pending", "assigned", "in_progress", "completed", "cancelled"],
       default: "pending",
     },
-    lastCustomerLoc: { lat: Number, lng: Number, at: Date },
-    lastTechnicianLoc: { lat: Number, lng: Number, at: Date },
+    lastCustomerLoc: { lat: Number, lng: Number },
+    lastTechnicianLoc: { lat: Number, lng: Number },
   },
   { timestamps: true }
 );
