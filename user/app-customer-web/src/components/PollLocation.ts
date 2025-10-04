@@ -16,13 +16,14 @@ function useLocationWatcher() {
     const watchId = navigator.geolocation.watchPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
+        
         setLocation({ lat: latitude, lng: longitude });
         try {
-          await axios.post("/api/location", {
+          await axios.post("http://localhost:5000/api/location", {
             lat: latitude,
             lng: longitude,
-            customerId: "cus_001",
-            requestId: "_id",
+            customerId: "cus_003",
+            requestId: "68dabea2f1a95b39c5483888",
           });
         } catch (err) {
           console.error("POST /api/locations failed:", err);
