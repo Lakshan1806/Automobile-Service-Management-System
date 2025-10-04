@@ -9,14 +9,22 @@ const locationController = {
     }
 
     try {
-      const request = await Request.findOne({ _id: requestId, customerId });
-      if (!request) {
+      const updated = await Request.findOneAndUpdate(
+        { _id: requestId, customerId },
+        { $set: { lastCustomerLoc: { lat, lng, at: new Date() } } }
+      );
+      if (!updated) {
         return res.status(404).json({ message: "Request not found" });
       }
+      return res.status(200).json({ message: "Location updated successfully" });
     } catch (error) {
       console.error("Error updating location:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
+  },
+
+  testLocation: (req, res) => {
+    res.status(200).json({ message: "Location service is up and running!" });
   },
 };
 
