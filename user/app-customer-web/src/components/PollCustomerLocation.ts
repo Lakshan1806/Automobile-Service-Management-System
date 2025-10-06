@@ -19,11 +19,11 @@ function useLocationWatcher() {
         
         setLocation({ lat: latitude, lng: longitude });
         try {
-          await axios.post("http://localhost:5000/api/location", {
+          await axios.patch("http://localhost:5000/api/location", {
             lat: latitude,
             lng: longitude,
             customerId: "cus_003",
-            requestId: "68dabea2f1a95b39c5483888",
+            requestId: "68e350f894c77c1f8bab2710",
           });
         } catch (err) {
           console.error("POST /api/locations failed:", err);
