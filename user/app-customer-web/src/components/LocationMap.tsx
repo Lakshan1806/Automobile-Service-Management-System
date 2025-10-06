@@ -1,6 +1,11 @@
 "use client";
 
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import {
+  APIProvider,
+  Map,
+  AdvancedMarker,
+  Pin,
+} from "@vis.gl/react-google-maps";
 
 function LocationMap({
   currentLocation: { lat: userLat, lng: userLng },
@@ -20,7 +25,13 @@ function LocationMap({
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
       >
         <AdvancedMarker position={{ lat: userLat, lng: userLng }} />
-        <AdvancedMarker position={{ lat: techLat, lng: techLng }} />
+        <AdvancedMarker position={{ lat: techLat, lng: techLng }}>
+          <Pin
+            background={"#0f9d58"}
+            borderColor={"#006425"}
+            glyphColor={"#60d98f"}
+          />
+        </AdvancedMarker>
       </Map>
     </APIProvider>
   );
