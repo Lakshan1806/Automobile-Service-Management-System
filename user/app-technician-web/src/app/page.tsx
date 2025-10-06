@@ -1,12 +1,14 @@
 "use client";
 import Map from "@/components/LocationMap";
-import { useLocationWatcher } from "@/components/PollLocation";
+import { useLocationWatcher } from "@/components/PollTechnicianLocation";
+import { useCustomerLocation } from "@/components/PollCustomerLocation";
 
 export default function Home() {
-  const location = useLocationWatcher();
+  const currentLocation = useLocationWatcher();
+  const customerLocation = useCustomerLocation();
   return (
     <div className="h-dvh">
-      <Map center={location} />
+      <Map currentLocation={currentLocation} customerLocation={customerLocation} />
     </div>
   );
 }
