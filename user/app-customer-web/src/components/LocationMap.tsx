@@ -19,13 +19,15 @@ function LocationMap({
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
       <Map
         className="w-full h-full"
-        defaultCenter={{ lat: userLat, lng: userLng }}
+        center={{ lat: userLat, lng: userLng }}
         defaultZoom={16}
         gestureHandling="greedy"
         disableDefaultUI
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
       >
-        <AdvancedMarker position={{ lat: userLat, lng: userLng }} />
+        <AdvancedMarker position={{ lat: userLat, lng: userLng }} >
+          <Image src="/assets/user-vehicle.png" alt="User Vehicle" width={64} height={64} />
+        </AdvancedMarker>
         <AdvancedMarker position={{ lat: techLat, lng: techLng }}>
           <Image src="/assets/tow-vehicle.png" alt="Tow Vehicle" width={64} height={64} />
         </AdvancedMarker>
