@@ -6,6 +6,7 @@ import {
   AdvancedMarker,
   Pin,
 } from "@vis.gl/react-google-maps";
+import Image from "next/image";
 
 function LocationMap({
   currentLocation: { lat: userLat, lng: userLng },
@@ -26,11 +27,7 @@ function LocationMap({
       >
         <AdvancedMarker position={{ lat: userLat, lng: userLng }} />
         <AdvancedMarker position={{ lat: techLat, lng: techLng }}>
-          <Pin
-            background={"#0f9d58"}
-            borderColor={"#006425"}
-            glyphColor={"#60d98f"}
-          />
+          <Image src="/assets/tow-vehicle.png" alt="Tow Vehicle" width={64} height={64} />
         </AdvancedMarker>
       </Map>
     </APIProvider>
