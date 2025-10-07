@@ -19,7 +19,7 @@ function useLocationWatcher() {
         
         setLocation({ lat: latitude, lng: longitude });
         try {
-          await axios.patch("http://localhost:5000/api/location", {
+          await axios.patch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/location`, {
             lat: latitude,
             lng: longitude,
             customerId: "cus_003",
