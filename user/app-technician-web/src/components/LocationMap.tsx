@@ -18,7 +18,7 @@ function LocationMap({
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
       <Map
         className="w-full h-full"
-        defaultCenter={{ lat: userLat, lng: userLng }}
+        center={{ lat: userLat, lng: userLng }}
         defaultZoom={16}
         gestureHandling="greedy"
         disableDefaultUI
