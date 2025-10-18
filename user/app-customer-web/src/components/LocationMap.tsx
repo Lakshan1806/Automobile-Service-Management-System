@@ -4,7 +4,7 @@ import {
   APIProvider,
   Map,
   AdvancedMarker,
-  Pin,
+  Polyline,
 } from "@vis.gl/react-google-maps";
 import Image from "next/image";
 
@@ -18,18 +18,28 @@ function LocationMap({
   return (
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
       <Map
-        className="w-full h-full"
+        className="h-full w-full"
         center={{ lat: userLat, lng: userLng }}
         defaultZoom={16}
         gestureHandling="greedy"
         disableDefaultUI
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
       >
-        <AdvancedMarker position={{ lat: userLat, lng: userLng }} >
-          <Image src="/assets/user-vehicle.png" alt="User Vehicle" width={64} height={64} />
+        <AdvancedMarker position={{ lat: userLat, lng: userLng }}>
+          <Image
+            src="/assets/user-vehicle.png"
+            alt="User Vehicle"
+            width={64}
+            height={64}
+          />
         </AdvancedMarker>
         <AdvancedMarker position={{ lat: techLat, lng: techLng }}>
-          <Image src="/assets/tow-vehicle.png" alt="Tow Vehicle" width={64} height={64} />
+          <Image
+            src="/assets/tow-vehicle.png"
+            alt="Tow Vehicle"
+            width={64}
+            height={64}
+          />
         </AdvancedMarker>
       </Map>
     </APIProvider>
