@@ -12,8 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from decouple import config
 from dotenv import load_dotenv
-
 # Load environment variables
 load_dotenv()
 
@@ -31,6 +31,9 @@ SECRET_KEY = 'django-insecure-hvk70k^^ri(haq)jli1i1zh_0xb^1^gi*o^q3odo=_x@h*=3%0
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# Set APPEND_SLASH to False to prevent Django from redirecting URLs
+APPEND_SLASH = False
 
 
 # Application definition
@@ -131,3 +134,13 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = config('EMAIL_PORT', cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+# Use environment variable DEFAULT_FROM_EMAIL if set, otherwise use EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
