@@ -4,7 +4,7 @@ import {
   APIProvider,
   Map,
   AdvancedMarker,
-  Polyline,
+  useMap,
 } from "@vis.gl/react-google-maps";
 import Image from "next/image";
 
