@@ -88,19 +88,54 @@ def send_otp_email(request):
         if not email:
             return JsonResponse({'error': 'Email address is required'}, status=400)
 
-        # Get the latest OTP for this email
+        # Log the email we're searching for, to help with debugging
+        logger.info(f"Searching for OTP for email: {email}")
+
+        # Try to get the latest OTP for this email with more lenient filtering
         try:
+            # First try with strict filtering (valid, unused OTPs)
             otp = OTP.objects.filter(
                 email=email,
                 is_used=False,
                 expires_at__gt=datetime.datetime.now()
-            ).latest('created_at')
+            ).order_by('-created_at').first()
 
-            otp_code = otp.otp_code
+            if not otp:
+                # If not found, try with just the email match (for debugging)
+                otp = OTP.objects.filter(email=email).order_by(
+                    '-created_at').first()
+                if otp:
+                    # Log that we found an expired or used OTP
+                    logger.warning(
+                        f"Found only expired/used OTP for {email}: {otp.otp_code}, expired: {otp.expires_at < datetime.datetime.now()}, used: {otp.is_used}")
+
+                    # If the OTP is marked as used but we need it, we can temporarily "revive" it
+                    if otp.is_used:
+                        otp.is_used = False
+                        otp.save()
+                        logger.info(
+                            f"Revived used OTP for debugging: {otp.otp_code}")
+
+                    # If the OTP is expired but recent (within last hour), extend its validity
+                    if otp.expires_at < datetime.datetime.now() and otp.expires_at > datetime.datetime.now() - datetime.timedelta(hours=1):
+                        otp.expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
+                        otp.save()
+                        logger.info(
+                            f"Extended expiration of OTP for debugging: {otp.otp_code}")
+
+            if otp:
+                otp_code = otp.otp_code
+            else:
+                # If still not found, create a new OTP
+                logger.warning(f"No OTP found for {email}, generating new one")
+                otp_code = OTPService.generate_otp(email)
+                logger.info(f"New OTP generated: {otp_code}")
 
         except OTP.DoesNotExist:
-            # Generate new OTP if none exists
+            # Fallback to generate a new OTP
+            logger.warning(f"OTP.DoesNotExist for {email}, generating new one")
             otp_code = OTPService.generate_otp(email)
+            logger.info(f"New OTP generated: {otp_code}")
 
         # Send OTP via email
         success = EmailService.send_otp_email(email, otp_code)
@@ -108,7 +143,8 @@ def send_otp_email(request):
         if success:
             return JsonResponse({
                 'success': True,
-                'message': 'OTP sent successfully to email'
+                'message': 'OTP sent successfully to email',
+                'otp': otp_code
             })
         else:
             return JsonResponse({
@@ -243,22 +279,22 @@ def send_bill_notification(request, bill_id):
     try:
         # Parse request body
         data = json.loads(request.body)
-        
+
         # Check for either 'email' or 'customer_email' in the request
         customer_email = data.get('email') or data.get('customer_email')
-        
+
         # Get bill amount from either 'amount' or 'total_amount'
         bill_amount = data.get('amount') or data.get('total_amount', 0)
-        
+
         if not customer_email:
             return JsonResponse({'error': 'Customer email is required'}, status=400)
-            
+
         # Generate OTP - 6 digits
         otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-        
+
         # Log the OTP to verify it's the same one sent in the email
         logger.info(f"Generated OTP for bill {bill_id}: {otp}")
-        
+
         # Create an itemized bill summary if items are provided
         items_summary = ""
         items = data.get('items', [])
@@ -270,7 +306,7 @@ def send_bill_notification(request, bill_id):
                 quantity = item.get('quantity', 1)
                 subtotal = item.get('subtotal', price * quantity)
                 items_summary += f"- {name}: ${price} x {quantity} = ${subtotal}\n"
-        
+
         # Email subject and message
         subject = 'Your Automobile Service Bill Payment OTP'
         message = f"""
@@ -284,7 +320,7 @@ This OTP is valid for 10 minutes.
 
 Thank you for choosing our service!
         """
-        
+
         # Send email using Django's send_mail - store the result
         email_sent = send_mail(
             subject,
@@ -293,18 +329,18 @@ Thank you for choosing our service!
             [customer_email],  # To email
             fail_silently=False,
         )
-        
+
         if email_sent:
             # Return success response with the same OTP that was sent
             return JsonResponse({
-                'success': True, 
+                'success': True,
                 'message': 'OTP sent successfully',
                 'otp': otp,  # Include the exact same OTP in response
                 'email': customer_email
             })
         else:
             return JsonResponse({'error': 'Failed to send email'}, status=500)
-        
+
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:

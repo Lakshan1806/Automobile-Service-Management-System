@@ -3,11 +3,13 @@ from . import views
 
 urlpatterns = [
     # OTP Services
-    path('api/otp/generate/', views.generate_otp, name='generate_otp'),
-    path('api/otp/verify/', views.verify_otp, name='verify_otp'),
-    path('api/otp/send/', views.send_otp_email, name='send_otp_email'),
+    path('api/otp/generate/', views.generate_otp,
+         name='generate_otp'),  # Generates OTP
     path('api/otp/send-email/', views.send_otp_email,
-         name='send_otp_email_alternative'),
+         name='send_otp_email'),  # Sends previously generated OTP
+    path('api/otp/verify/', views.verify_otp,
+         name='verify_otp'),  # Verifies OTP
+    
 
     # Bill Services
     path('api/bill/generate/', views.generate_bill, name='generate_bill'),
