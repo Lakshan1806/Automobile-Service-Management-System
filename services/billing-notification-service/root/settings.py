@@ -144,3 +144,8 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 # Use environment variable DEFAULT_FROM_EMAIL if set, otherwise use EMAIL_HOST_USER
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+
+
+# Directory for storing bill PDFs
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
