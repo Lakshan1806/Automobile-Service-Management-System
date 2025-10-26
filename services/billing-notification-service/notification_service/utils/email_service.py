@@ -2,7 +2,7 @@ from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.conf import settings
 from django.template.loader import render_to_string
 from email.mime.application import MIMEApplication
-import os
+from .bill_service import BillService
 
 
 class EmailService:
@@ -84,16 +84,15 @@ class EmailService:
             )
             email_message.attach_alternative(html_message, "text/html")
 
-            # Attach PDF if available
-            if bill.pdf_path and os.path.exists(bill.pdf_path):
-                with open(bill.pdf_path, 'rb') as f:
-                    pdf_attachment = MIMEApplication(f.read(), _subtype="pdf")
-                    pdf_attachment.add_header(
-                        'content-disposition',
-                        'attachment',
-                        filename=os.path.basename(bill.pdf_path)
-                    )
-                    email_message.attach(pdf_attachment)
+            # Generate and attach PDF from memory
+            pdf_buffer = BillService.generate_bill_pdf(bill)
+            pdf_attachment = MIMEApplication(pdf_buffer.read(), _subtype="pdf")
+            pdf_attachment.add_header(
+                'content-disposition',
+                'attachment',
+                filename=f"bill_{bill.bill_id}.pdf"
+            )
+            email_message.attach(pdf_attachment)
 
             email_message.send()
             return True

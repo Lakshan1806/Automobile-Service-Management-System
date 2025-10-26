@@ -189,9 +189,6 @@ def generate_bill(request):
         # Generate bill
         bill = BillService.generate_bill(customer_email, items)
 
-        # Generate PDF
-        pdf_path = BillService.generate_bill_pdf(bill)
-
         return JsonResponse({
             'success': True,
             'message': 'Bill generated successfully',

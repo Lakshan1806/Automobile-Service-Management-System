@@ -3,8 +3,8 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from .models import OTP, Bill, BillItem
 import random
-import os
 import uuid
+from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -97,20 +97,13 @@ class BillService:
     @staticmethod
     def generate_bill_pdf(bill):
         """
-        Generate a PDF for the specified bill
+        Generate a PDF for the specified bill in memory
         """
-        # Create directory for bills if it doesn't exist
-        bills_dir = os.path.join(settings.BASE_DIR, 'bills')
-        if not os.path.exists(bills_dir):
-            os.makedirs(bills_dir)
-
-        # Generate PDF filename
-        timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
-        pdf_filename = f"bill_{bill.bill_id}_{timestamp}.pdf"
-        pdf_path = os.path.join(bills_dir, pdf_filename)
+        # Create an in-memory buffer for the PDF
+        pdf_buffer = BytesIO()
 
         # Create PDF using ReportLab
-        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
         styles = getSampleStyleSheet()
         elements = []
 
@@ -171,7 +164,10 @@ class BillService:
         # Build PDF
         doc.build(elements)
 
-        return pdf_path
+        # Reset buffer position to the beginning
+        pdf_buffer.seek(0)
+
+        return pdf_buffer
 
 
 class EmailService:
@@ -198,8 +194,8 @@ class EmailService:
     def send_bill_email(email, bill):
         """Send bill via email with PDF attachment"""
         try:
-            # Generate PDF
-            pdf_path = BillService.generate_bill_pdf(bill)
+            # Generate PDF in memory
+            pdf_buffer = BillService.generate_bill_pdf(bill)
 
             # Prepare email
             subject = f"Your Automobile Service Bill #{bill.bill_id}"
@@ -227,10 +223,9 @@ Thank you!
                 to=[email]
             )
 
-            # Attach PDF file
-            with open(pdf_path, 'rb') as f:
-                email_obj.attach(
-                    f"bill_{bill.bill_id}.pdf", f.read(), 'application/pdf')
+            # Attach PDF file from memory buffer
+            email_obj.attach(
+                f"bill_{bill.bill_id}.pdf", pdf_buffer.read(), 'application/pdf')
 
             # Send email
             email_obj.send(fail_silently=False)
