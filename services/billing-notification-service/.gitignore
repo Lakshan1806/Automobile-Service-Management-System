@@ -1,2 +1,8 @@
 /venv
 .env
+bills/
+*.pyc
+__pycache__/
+db.sqlite3
+test_bill.pdf
+test_*.pdf
