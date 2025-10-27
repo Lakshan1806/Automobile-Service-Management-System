@@ -7,29 +7,86 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+
+type LatLng = { lat: number; lng: number };
+
+async function fetchRoute(origin: LatLng, destination: LatLng) {
+  const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/route`, {
+    origin,
+    destination,
+    mode: "DRIVE",
+  });
+  if (!response) throw new Error("Route fetch failed");
+  return response.data;
+}
+
+function PolylineOverlay({ path }: { path: LatLng[] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !path?.length) return;
+    const pl = new google.maps.Polyline({
+      path,
+      strokeWeight: 5,
+      strokeOpacity: 1.0,
+    });
+    pl.setMap(map);
+    return () => pl.setMap(null);
+  }, [map, path]);
+  return null;
+}
 
 function LocationMap({
   currentLocation: { lat: userLat, lng: userLng },
   technicianLocation: { lat: techLat, lng: techLng },
 }: {
-  currentLocation: { lat: number; lng: number };
-  technicianLocation: { lat: number; lng: number };
+  currentLocation: LatLng;
+  technicianLocation: LatLng;
 }) {
-  async function fetchRoute() {
-    const origin: { lat: number; lng: number } = { lat: techLat, lng: techLng };
-    const destination: { lat: number; lng: number } = {
-      lat: userLat,
-      lng: userLng,
+  const [path, setPath] = useState<LatLng[] | null>(null);
+  const [eta, setEta] = useState<string>("");
+
+  const center = useMemo<LatLng>(
+    () => ({ lat: (userLat + techLat) / 2, lng: (userLng + techLng) / 2 }),
+    [userLat, userLng, techLat, techLng],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { polyline, duration } = await fetchRoute(
+          { lat: techLat, lng: techLng },
+          { lat: userLat, lng: userLng },
+        );
+        const decoded = (window as any).google.maps.geometry.encoding
+          .decodePath(polyline)
+          .map((ll: google.maps.LatLng) => ({ lat: ll.lat(), lng: ll.lng() }));
+
+        if (!cancelled) {
+          setPath(decoded);
+          const s = parseInt(duration.replace("s", ""), 10) || 0;
+          const m = Math.round(s / 60);
+          setEta(
+            m < 60
+              ? `${Math.max(1, m)} min`
+              : `${Math.floor(m / 60)}h ${m % 60}m`,
+          );
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) {
+          setPath(null);
+          setEta("");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
-    const response = await axios.post("/api/route", {
-      origin,
-      destination,
-      mode: "DRIVE",
-    });
-    if (!response) throw new Error("Route fetch failed");
-    return response.data;
-  }
+  }, [userLat, userLng, techLat, techLng]);
+
   return (
     <APIProvider
       apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
@@ -37,8 +94,8 @@ function LocationMap({
     >
       <Map
         className="h-full w-full"
-        center={{ lat: userLat, lng: userLng }}
-        defaultZoom={16}
+        center={center}
+        defaultZoom={13}
         gestureHandling="greedy"
         disableDefaultUI
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
@@ -59,6 +116,8 @@ function LocationMap({
             height={64}
           />
         </AdvancedMarker>
+
+        <PolylineOverlay path={path} />
       </Map>
     </APIProvider>
   );
