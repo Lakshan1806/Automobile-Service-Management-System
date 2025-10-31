@@ -7,6 +7,7 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import Image from "next/image";
+import axios from "axios";
 
 function LocationMap({
   currentLocation: { lat: userLat, lng: userLng },
@@ -15,8 +16,25 @@ function LocationMap({
   currentLocation: { lat: number; lng: number };
   technicianLocation: { lat: number; lng: number };
 }) {
+  async function fetchRoute() {
+    const origin: { lat: number; lng: number } = { lat: techLat, lng: techLng };
+    const destination: { lat: number; lng: number } = {
+      lat: userLat,
+      lng: userLng,
+    };
+    const response = await axios.post("/api/route", {
+      origin,
+      destination,
+      mode: "DRIVE",
+    });
+    if (!response) throw new Error("Route fetch failed");
+    return response.data;
+  }
   return (
-    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+    <APIProvider
+      apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
+      libraries={["geometry"]}
+    >
       <Map
         className="h-full w-full"
         center={{ lat: userLat, lng: userLng }}
