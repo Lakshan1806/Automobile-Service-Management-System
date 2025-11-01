@@ -1,14 +1,5 @@
-"use client";
-import Map from "@/components/LocationMap";
-import { useLocationWatcher } from "@/components/PollCustomerLocation";
-import { useTechnicianLocation } from "@/components/PollTechnicianLocation";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  const currentLocation = useLocationWatcher();
-  const technicianLocation = useTechnicianLocation();
-  return (
-    <div className="h-dvh">
-      <Map currentLocation={currentLocation} technicianLocation={technicianLocation} />
-    </div>
-  );
+  redirect("/signin");
 }
