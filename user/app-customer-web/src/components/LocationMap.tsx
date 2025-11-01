@@ -94,8 +94,8 @@ function LocationMap({
     >
       <Map
         className="h-full w-full"
-        center={center}
-        defaultZoom={13}
+        center={{ lat: userLat, lng: userLng }}
+        defaultZoom={16}
         gestureHandling="greedy"
         disableDefaultUI
         mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}

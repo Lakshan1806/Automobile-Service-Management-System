@@ -37,3 +37,7 @@ build/
 
 # Prevent committing sensitive configs
 /src/main/resources/application-*.properties
+
+# macOS system files
+.DS_Store
+
