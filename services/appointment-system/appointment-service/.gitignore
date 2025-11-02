@@ -37,7 +37,14 @@ build/
 
 # Prevent committing sensitive configs
 /src/main/resources/application-*.properties
+/src/main/resources/application.properties
 
-# macOS system files
+# macOS
 .DS_Store
+
+# IntelliJ IDEA
+.idea/
+
+# System files
+Thumbs.db
 
