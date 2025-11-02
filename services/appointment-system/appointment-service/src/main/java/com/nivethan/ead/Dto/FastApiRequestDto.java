@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class FastApiRequestDto {
     private String vehicleType;
-    private String repair;
+    private String repairType;
     private String millage;
 
     @JsonFormat(pattern = "dd-MM-yyyy")

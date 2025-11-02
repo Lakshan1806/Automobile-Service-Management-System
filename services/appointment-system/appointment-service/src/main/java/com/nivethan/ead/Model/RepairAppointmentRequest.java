@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Data
 public class RepairAppointmentRequest {
     @Id
+    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

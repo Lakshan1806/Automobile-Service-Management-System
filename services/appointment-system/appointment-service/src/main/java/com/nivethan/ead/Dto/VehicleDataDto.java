@@ -1,19 +1,21 @@
 package com.nivethan.ead.Dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VehicleDataDto {
     private String vehicleId;
     private String noPlate;
     private String chaseNo;
-    private String type;
+    private String vehicleType;
     private String brand;
     private String customerId;
     private String customerPhone;
     private String customerName;
     private Integer millage;
-    private LocalDate lastServiceDate;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+    private LocalDateTime lastServiceDate;
 }
