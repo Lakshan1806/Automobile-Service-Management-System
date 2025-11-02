@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,54 +27,40 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponseDto createAppointment(AppointmentRequestDto requestDto) {
         try {
+            log.info("Creating appointment for vehicle ID: {}", requestDto.getVehicleId());
+
             // Step 1: Get vehicle data from vehicle microservice
             VehicleDataDto vehicleData = vehicleServiceClient.getVehicleData(requestDto.getVehicleId())
-                    .block(); // Using block for simplicity, consider async in production
+                    .block();
 
             if (vehicleData == null) {
                 throw new RuntimeException("Vehicle not found with ID: " + requestDto.getVehicleId());
             }
 
+            log.info("Successfully retrieved vehicle data: {}", vehicleData.getVehicleId());
+
             // Step 2: Prepare data for FastAPI prediction
             FastApiRequestDto fastApiRequest = new FastApiRequestDto();
-            fastApiRequest.setVehicleType(vehicleData.getType());
-            fastApiRequest.setRepair(requestDto.getRepairType());
+            fastApiRequest.setVehicleType(vehicleData.getVehicleType());
+            fastApiRequest.setRepairType(requestDto.getRepairType());
             fastApiRequest.setMillage(vehicleData.getMillage().toString());
-            fastApiRequest.setLastService(vehicleData.getLastServiceDate().format(DATE_FORMATTER));
+
+            // Convert LocalDateTime to LocalDate for the format needed by FastAPI
+            LocalDate lastServiceLocalDate = vehicleData.getLastServiceDate().toLocalDate();
+            fastApiRequest.setLastService(lastServiceLocalDate.format(DATE_FORMATTER));
+
+            log.info("Calling FastAPI with prediction request: {}", fastApiRequest);
 
             // Step 3: Get prediction from FastAPI
             FastApiResponseDto fastApiResponse = fastApiServiceClient.getSuggestedStartDate(fastApiRequest)
                     .block();
 
             // Step 4: Create and save appointment
-            RepairAppointmentRequest appointment = new RepairAppointmentRequest();
-
-            // Set vehicle data
-            appointment.setVehicleId(vehicleData.getVehicleId());
-            appointment.setNoPlate(vehicleData.getNoPlate());
-            appointment.setChaseNo(vehicleData.getChaseNo());
-            appointment.setVehicleType(vehicleData.getType());
-            appointment.setVehicleBrand(vehicleData.getBrand());
-            appointment.setCustomerId(vehicleData.getCustomerId());
-            appointment.setCustomerPhone(vehicleData.getCustomerPhone());
-            appointment.setCustomerName(vehicleData.getCustomerName());
-            appointment.setMillage(vehicleData.getMillage());
-            appointment.setLastServiceDate(vehicleData.getLastServiceDate());
-
-            // Set user provided data
-            appointment.setManualStartDate(requestDto.getManualStartDate());
-            appointment.setRepairType(requestDto.getRepairType());
-            appointment.setDescription(requestDto.getDescription());
-
-            // Set prediction data
-            if (fastApiResponse != null) {
-                appointment.setSuggestedStartDate(fastApiResponse.getSuggestedStartDate());
-                appointment.setPredictedDuration(fastApiResponse.getPredictedDuration());
-                appointment.setAccuracy(fastApiResponse.getAccuracy());
-            }
+            RepairAppointmentRequest appointment = createAppointmentEntity(requestDto, vehicleData, fastApiResponse, lastServiceLocalDate);
 
             // Save to database
             RepairAppointmentRequest savedAppointment = appointmentRepository.save(appointment);
+            log.info("Successfully created appointment with ID: {}", savedAppointment.getId());
 
             return convertToResponseDto(savedAppointment);
 
@@ -83,6 +70,49 @@ public class AppointmentService {
         }
     }
 
+    private RepairAppointmentRequest createAppointmentEntity(AppointmentRequestDto requestDto,
+                                                             VehicleDataDto vehicleData,
+                                                             FastApiResponseDto fastApiResponse,
+                                                             LocalDate lastServiceLocalDate) {
+        RepairAppointmentRequest appointment = new RepairAppointmentRequest();
+
+        // Set vehicle data
+        appointment.setVehicleId(vehicleData.getVehicleId());
+        appointment.setNoPlate(vehicleData.getNoPlate());
+        appointment.setChaseNo(vehicleData.getChaseNo());
+        appointment.setVehicleType(vehicleData.getVehicleType());
+        appointment.setVehicleBrand(vehicleData.getBrand());
+        appointment.setCustomerId(vehicleData.getCustomerId());
+        appointment.setCustomerPhone(vehicleData.getCustomerPhone());
+        appointment.setCustomerName(vehicleData.getCustomerName());
+        appointment.setMillage(vehicleData.getMillage());
+        appointment.setLastServiceDate(lastServiceLocalDate); // Use the converted LocalDate
+
+        // Set user provided data
+        appointment.setManualStartDate(requestDto.getManualStartDate());
+        appointment.setRepairType(requestDto.getRepairType());
+        appointment.setDescription(requestDto.getDescription());
+
+        // Set prediction data - handle null response gracefully
+        if (fastApiResponse != null) {
+            appointment.setSuggestedStartDate(fastApiResponse.getSuggestedStartDate());
+            appointment.setPredictedDuration(fastApiResponse.getPredictedDuration());
+            appointment.setAccuracy(fastApiResponse.getAccuracy());
+        } else {
+            // Set default values if FastAPI is unavailable
+            appointment.setSuggestedStartDate(requestDto.getManualStartDate());
+            appointment.setPredictedDuration(5); // default 5 days
+            appointment.setAccuracy(0.0); // 0% accuracy for fallback
+            log.warn("FastAPI response was null, using default values");
+        }
+
+        // Set initial status
+        appointment.setStatus(AppointmentStatus.PENDING);
+
+        return appointment;
+    }
+
+    // ... rest of your methods remain the same
     public List<AppointmentResponseDto> getAllAppointments() {
         return appointmentRepository.findAll().stream()
                 .map(this::convertToResponseDto)
