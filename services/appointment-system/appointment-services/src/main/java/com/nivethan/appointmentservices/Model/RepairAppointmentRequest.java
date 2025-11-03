@@ -66,7 +66,7 @@ public class RepairAppointmentRequest {
     private Integer predictedDuration; // in days
 
     @Column(name = "accuracy")
-    private Double accuracy;
+    private Double confidence;
 
 //    Preset Status
 

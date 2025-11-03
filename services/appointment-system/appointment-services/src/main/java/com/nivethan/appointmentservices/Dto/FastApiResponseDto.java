@@ -8,5 +8,5 @@ import java.time.LocalDate;
 public class FastApiResponseDto {
     private LocalDate suggestedStartDate;
     private Integer predictedDuration;
-    private Double accuracy;
+    private Double confidence;
 }

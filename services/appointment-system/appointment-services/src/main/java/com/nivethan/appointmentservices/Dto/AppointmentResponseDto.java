@@ -17,7 +17,7 @@ public class AppointmentResponseDto {
     private LocalDate manualStartDate;
     private LocalDate suggestedStartDate;
     private Integer predictedDuration;
-    private Double accuracy;
+    private Double confidence;
     private String status;
     private LocalDateTime createdAt;
 }
