@@ -11,7 +11,7 @@ public class VehicleDataDto {
     private String noPlate;
     private String chaseNo;
     private String vehicleType;
-    private String brand;
+    private String vehicleBrand;
     private String customerId;
     private String customerPhone;
     private String customerName;

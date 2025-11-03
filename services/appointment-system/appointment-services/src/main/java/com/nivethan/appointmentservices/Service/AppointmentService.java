@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class AppointmentService {
+
+
     private final RepairAppointmentRepository appointmentRepository;
     private final VehicleServiceClient vehicleServiceClient;
     private final FastApiServiceClient fastApiServiceClient;
@@ -42,6 +44,7 @@ public class AppointmentService {
             // Step 2: Prepare data for FastAPI prediction
             FastApiRequestDto fastApiRequest = new FastApiRequestDto();
             fastApiRequest.setVehicleType(vehicleData.getVehicleType());
+            fastApiRequest.setVehicleBrand(vehicleData.getVehicleBrand());
             fastApiRequest.setRepairType(requestDto.getRepairType());
             fastApiRequest.setMillage(vehicleData.getMillage().toString());
 
@@ -81,7 +84,7 @@ public class AppointmentService {
         appointment.setNoPlate(vehicleData.getNoPlate());
         appointment.setChaseNo(vehicleData.getChaseNo());
         appointment.setVehicleType(vehicleData.getVehicleType());
-        appointment.setVehicleBrand(vehicleData.getBrand());
+        appointment.setVehicleBrand(vehicleData.getVehicleBrand());
         appointment.setCustomerId(vehicleData.getCustomerId());
         appointment.setCustomerPhone(vehicleData.getCustomerPhone());
         appointment.setCustomerName(vehicleData.getCustomerName());
@@ -97,12 +100,12 @@ public class AppointmentService {
         if (fastApiResponse != null) {
             appointment.setSuggestedStartDate(fastApiResponse.getSuggestedStartDate());
             appointment.setPredictedDuration(fastApiResponse.getPredictedDuration());
-            appointment.setAccuracy(fastApiResponse.getAccuracy());
+            appointment.setConfidence(fastApiResponse.getConfidence());
         } else {
             // Set default values if FastAPI is unavailable
             appointment.setSuggestedStartDate(requestDto.getManualStartDate());
             appointment.setPredictedDuration(5); // default 5 days
-            appointment.setAccuracy(0.0); // 0% accuracy for fallback
+            appointment.setConfidence(0.0); // 0% accuracy for fallback
             log.warn("FastAPI response was null, using default values");
         }
 
@@ -154,7 +157,7 @@ public class AppointmentService {
         response.setManualStartDate(appointment.getManualStartDate());
         response.setSuggestedStartDate(appointment.getSuggestedStartDate());
         response.setPredictedDuration(appointment.getPredictedDuration());
-        response.setAccuracy(appointment.getAccuracy());
+        response.setConfidence(appointment.getConfidence());
         response.setStatus(appointment.getStatus().name());
         response.setCreatedAt(appointment.getCreatedAt());
         return response;

@@ -28,7 +28,7 @@ public class FastApiServiceClient {
         log.info("Calling FastAPI with request: {}", request);
 
         return webClient.post()
-                .uri("/api/suggest_start_date")
+                .uri("/schedule/suggest-start")
                 .bodyValue(request)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
@@ -61,7 +61,7 @@ public class FastApiServiceClient {
         FastApiResponseDto fallback = new FastApiResponseDto();
         // You can set some default values here
         fallback.setPredictedDuration(5); // default 5 days
-        fallback.setAccuracy(0.0); // 0% accuracy for fallback
+        fallback.setConfidence(0.0); // 0% accuracy for fallback
         // You might want to calculate a simple suggested start date based on manual start date
         // For now, we'll return null for suggestedStartDate and handle it in the service
 

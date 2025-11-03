@@ -1,9 +1,7 @@
-# config.py
 import os
-from typing import Dict
+from typing import Dict, Any
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 class Settings:
@@ -18,7 +16,7 @@ class Settings:
     
     # Model Configuration
     MODEL_RETRAIN_HOURS: int = int(os.getenv("MODEL_RETRAIN_HOURS", 12))
-    MODEL_FILE: str = os.getenv("MODEL_FILE", "duration_model.joblib")
+    MODEL_FILE: str = os.getenv("MODEL_FILE", "enhanced_duration_model.joblib")
     
     # Workshop Resources
     WORKSHOP_RESOURCES: Dict[str, int] = {
@@ -31,27 +29,31 @@ class Settings:
     
     # Repair Requirements
     REPAIR_REQUIREMENTS: Dict[str, Dict[str, int]] = {
-        "Engine": {
+        "engine": {
             "engine_bay": 1,
             "engine_specialist": 1
         },
-        "Tyre": {
+        "tyre": {
             "tire_lift": 1,
             "general_tech": 1
         },
-        "Full-service": {
+        "tire": {
+            "tire_lift": 1,
+            "general_tech": 1
+        },
+        "full-service": {
             "general_bay": 1,
             "general_tech": 1
         },
-        "Brake": {
+        "brake": {
             "general_bay": 1,
             "general_tech": 1
         },
-        "Electrical": {
+        "electrical": {
             "general_bay": 1,
             "general_tech": 1
         },
-        "Transmission": {
+        "transmission": {
             "engine_bay": 1,
             "engine_specialist": 1
         },
@@ -60,6 +62,15 @@ class Settings:
             "general_tech": 1
         }
     }
+    
+    # Model Features Configuration
+    MODEL_FEATURES: list = [
+        'vehicleType', 'vehicleBrand', 'repairType', 'millage', 
+        'days_since_last_service', 'vehicle_age', 'season'
+    ]
+    
+    # Feature Engineering Parameters
+    HIGH_MILLAGE_THRESHOLD: int = 100000
+    OLD_VEHICLE_THRESHOLD: int = 10
 
-# Create settings instance
 settings = Settings()

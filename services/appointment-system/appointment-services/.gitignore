@@ -46,3 +46,4 @@ application.yml
 # Logs
 *.log
 
+.DS_Store
