@@ -38,13 +38,13 @@ class EnhancedRepairRequest(BaseModel):
             raise ValueError("lastService must be in format dd-MM-yyyy")
 
 class DurationResponse(BaseModel):
-    predicted_duration_days: int
+    predictedDuration: int
     confidence: float
     features_used: List[str]
 
 class ScheduleResponse(BaseModel):
-    suggested_start_date: str
-    predicted_duration_days: int
+    suggestedStartDate: str
+    predictedDuration: int
     confidence: float
 
 class ResourceUpdateRequest(BaseModel):
@@ -263,7 +263,7 @@ async def predict_enhanced_duration(request: EnhancedRepairRequest):
     duration, confidence = await get_enhanced_prediction(request)
     
     return DurationResponse(
-        predicted_duration_days=duration,
+        predictedDuration=duration,
         confidence=round(confidence, 2),
         features_used=settings.MODEL_FEATURES
     )
@@ -366,8 +366,8 @@ async def suggest_enhanced_start_date(request: EnhancedRepairRequest):
         
         if is_slot_available:
             return ScheduleResponse(
-                suggested_start_date=current_check_date.strftime('%Y-%m-%d'),
-                predicted_duration_days=needed_duration,
+                suggestedStartDate=current_check_date.strftime('%Y-%m-%d'),
+                predictedDuration=needed_duration,
                 confidence=round(confidence, 2)
             )
     
