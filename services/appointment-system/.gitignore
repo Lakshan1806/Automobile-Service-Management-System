@@ -13,3 +13,5 @@ Thumbs.db
 # Temp files
 *.tmp
 *.swp
+
+appointment-service/

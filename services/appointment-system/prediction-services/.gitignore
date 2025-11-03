@@ -1,0 +1,132 @@
+# -------------------
+# Operating System Files
+# -------------------
+.DS_Store
+Thumbs.db
+
+# -------------------
+# IDE / Editor
+# -------------------
+.idea/
+.vscode/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# -------------------
+# Python Bytecode / Cache
+# -------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# -------------------
+# Python Virtual Environments
+# -------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -------------------
+# Python Packaging
+# -------------------
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# -------------------
+# Logs / Debug / Temp
+# -------------------
+*.log
+*.tmp
+*.bak
+*.swp
+*.sqlite3
+
+# -------------------
+# Environment / Secrets
+# -------------------
+.env
+.env.local
+.env.*.local
+config.json
+credentials.json
+
+# -------------------
+# ML / Models / Outputs
+# -------------------
+*.joblib
+*.pkl
+*.h5
+*.ckpt
+*.pt
+*.onnx
+
+# -------------------
+# Coverage / Test Artifacts
+# -------------------
+htmlcov/
+.coverage
+.tox/
+.pytest_cache/
+
+# -------------------
+# Misc
+# -------------------
+*.DS_Store
+
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv
+venv/
+ENV/
+env/
+
+# Model files
+*.joblib
+*.pkl
+*.model
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS - ADD THIS IF NOT PRESENT
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
