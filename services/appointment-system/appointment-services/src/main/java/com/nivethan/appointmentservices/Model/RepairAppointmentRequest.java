@@ -15,6 +15,7 @@ public class RepairAppointmentRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+//    Data Received from Vehicle Micro Service
     @Column(name = "vehicle_id", nullable = false)
     private String vehicleId;
 
@@ -45,6 +46,8 @@ public class RepairAppointmentRequest {
     @Column(name = "last_service_date")
     private LocalDate lastServiceDate;
 
+//    Data Handled in the Appointment
+
     @Column(name = "manual_start_date")
     private LocalDate manualStartDate;
 
@@ -53,6 +56,8 @@ public class RepairAppointmentRequest {
 
     @Column(name = "description", length = 1000)
     private String description;
+
+//    Data Returned from Prediction Service
 
     @Column(name = "suggested_start_date")
     private LocalDate suggestedStartDate;
@@ -63,9 +68,13 @@ public class RepairAppointmentRequest {
     @Column(name = "accuracy")
     private Double accuracy;
 
+//    Preset Status
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private AppointmentStatus status = AppointmentStatus.PENDING;
+
+//    Automatic Date
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
