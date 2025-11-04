@@ -1,63 +1,96 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
-import { signin } from '@/services/auth';
-import Button from '@/components/Button/Button';
-import FormInput from '@/components/FormInput/FormInput';
-import styles from './SignIn.module.css';
+import Link from "next/link";
+import { FormEvent, useState } from "react";
+import { signin } from "@/services/auth";
 
 export default function SignInPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [feedback, setFeedback] = useState<null | { type: "success" | "error"; message: string }>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setFeedback(null);
     setIsLoading(true);
 
     try {
       const response = await signin({ email, password });
-      localStorage.setItem(
-        'customer-auth',
-        JSON.stringify({
-          token: response.accessToken,
-          expiresIn: response.expiresIn,
-          customer: response.customer,
-        })
-      );
-      router.push('/tracking');
-    } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Failed to sign in.');
+      setFeedback({
+        type: "success",
+        message: `Welcome back, ${response.customer.name}. Your dashboard will load momentarily.`,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "We could not complete your sign in. Please try again.";
+      setFeedback({ type: "error", message });
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
-    <div className={styles.wrap}>
-      <h1>Sign In</h1>
-      {error && <p className={styles.error}>{error}</p>}
-      <form onSubmit={handleSubmit} className={styles.form} noValidate>
-        <FormInput label="Email" type="email" value={email} onChange={setEmail} autoComplete="email" />
-        <FormInput
-          label="Password"
-          type="password"
-          value={password}
-          onChange={setPassword}
-          autoComplete="current-password"
-        />
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Signing in…' : 'Continue'}
-        </Button>
-      </form>
-      <p className={styles.swap}>
-        No account? <Link href="/signup">Sign up</Link>
-      </p>
-    </div>
+    <section className="section">
+      <div className="container">
+        <form className="form-card" onSubmit={handleSubmit}>
+          <p className="eyebrow">Account access</p>
+          <h1>Sign in to NovaDrive</h1>
+          <p>
+            Manage appointments, view your service history, and update your
+            vehicles in the NovaDrive garage.
+          </p>
+
+          <div className="form-grid">
+            <div className="form-field">
+              <label htmlFor="email">Email address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="form-actions">
+            <Link href="/signup" className="button secondary">
+              Create account
+            </Link>
+            <button className="button primary" type="submit" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign in"}
+            </button>
+          </div>
+
+          {feedback && (
+            <div
+              className={`feedback ${feedback.type === "error" ? "error" : ""}`}
+              role="status"
+              aria-live="polite"
+            >
+              {feedback.message}
+            </div>
+          )}
+        </form>
+      </div>
+    </section>
   );
 }

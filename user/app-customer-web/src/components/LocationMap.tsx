@@ -45,7 +45,6 @@ function LocationMap({
   technicianLocation: LatLng;
 }) {
   const [path, setPath] = useState<LatLng[] | null>(null);
-  const [eta, setEta] = useState<string>("");
 
   const center = useMemo<LatLng>(
     () => ({ lat: (userLat + techLat) / 2, lng: (userLng + techLng) / 2 }),
@@ -56,29 +55,23 @@ function LocationMap({
     let cancelled = false;
     (async () => {
       try {
-        const { polyline, duration } = await fetchRoute(
+        const { polyline } = await fetchRoute(
           { lat: techLat, lng: techLng },
           { lat: userLat, lng: userLng },
         );
-        const decoded = (window as any).google.maps.geometry.encoding
+        const decoded = (
+          window as Window & typeof globalThis & { google: typeof google }
+        ).google.maps.geometry.encoding
           .decodePath(polyline)
           .map((ll: google.maps.LatLng) => ({ lat: ll.lat(), lng: ll.lng() }));
 
         if (!cancelled) {
           setPath(decoded);
-          const s = parseInt(duration.replace("s", ""), 10) || 0;
-          const m = Math.round(s / 60);
-          setEta(
-            m < 60
-              ? `${Math.max(1, m)} min`
-              : `${Math.floor(m / 60)}h ${m % 60}m`,
-          );
         }
       } catch (e) {
         console.error(e);
         if (!cancelled) {
           setPath(null);
-          setEta("");
         }
       }
     })();
@@ -94,7 +87,7 @@ function LocationMap({
     >
       <Map
         className="h-full w-full"
-        center={{ lat: userLat, lng: userLng }}
+        center={center}
         defaultZoom={16}
         gestureHandling="greedy"
         disableDefaultUI
