@@ -50,6 +50,9 @@ INSTALLED_APPS = [
     'admin_service',
 ]
 
+# Custom User Model
+AUTH_USER_MODEL = 'admin_service.User'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -175,6 +178,7 @@ REST_FRAMEWORK = {
 
     # Authentication (currently not required, but can be added)
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
 
