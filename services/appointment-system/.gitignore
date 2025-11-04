@@ -15,3 +15,26 @@ Thumbs.db
 *.swp
 
 appointment-service/
+
+# /appointment-system/.gitignore
+
+# Ignore the file with our secrets!
+.env
+
+# Ignore the file with FastAPI's local config
+# (It's better to pass these from docker-compose.yml, but
+# for now, just make sure you don't commit it.)
+prediction-services/.env
+
+# Java/Maven
+target/
+*.log
+.mvn/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+
