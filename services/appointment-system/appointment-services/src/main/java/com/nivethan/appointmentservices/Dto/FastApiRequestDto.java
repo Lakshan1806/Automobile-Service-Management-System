@@ -9,6 +9,8 @@ public class FastApiRequestDto {
     private String vehicleBrand;
     private String repairType;
     private String millage;
+    private Integer vehicleModelYear;
+
 
     @JsonFormat(pattern = "dd-MM-yyyy")
     private String lastService;

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -49,8 +50,10 @@ public class AppointmentService {
             fastApiRequest.setMillage(vehicleData.getMillage().toString());
 
             // Convert LocalDateTime to LocalDate for the format needed by FastAPI
-            LocalDate lastServiceLocalDate = vehicleData.getLastServiceDate().toLocalDate();
+            LocalDate lastServiceLocalDate = vehicleData.getLastServiceDate();
             fastApiRequest.setLastService(lastServiceLocalDate.format(DATE_FORMATTER));
+
+            fastApiRequest.setVehicleModelYear(vehicleData.getVehicleModelYear());
 
             log.info("Calling FastAPI with prediction request: {}", fastApiRequest);
 
@@ -90,6 +93,8 @@ public class AppointmentService {
         appointment.setCustomerName(vehicleData.getCustomerName());
         appointment.setMillage(vehicleData.getMillage());
         appointment.setLastServiceDate(lastServiceLocalDate); // Use the converted LocalDate
+        appointment.setVehicleModelYear(vehicleData.getVehicleModelYear());
+        appointment.setVehicleRegistrationYear(vehicleData.getVehicleRegistrationYear());
 
         // Set user provided data
         appointment.setManualStartDate(requestDto.getManualStartDate());
@@ -106,7 +111,7 @@ public class AppointmentService {
             appointment.setSuggestedStartDate(requestDto.getManualStartDate());
             appointment.setPredictedDuration(5); // default 5 days
             appointment.setConfidence(0.0); // 0% accuracy for fallback
-            log.warn("FastAPI response was null, using default values");
+            log.warn("Our Model took rest for a while, using default values");
         }
 
         // Set initial status
@@ -160,6 +165,13 @@ public class AppointmentService {
         response.setConfidence(appointment.getConfidence());
         response.setStatus(appointment.getStatus().name());
         response.setCreatedAt(appointment.getCreatedAt());
+        response.setMillage(appointment.getMillage());
+        response.setVehicleBrand(appointment.getVehicleBrand());
+        response.setChaseNo(appointment.getChaseNo());
+        response.setVehicleModelYear(appointment.getVehicleModelYear());
+        response.setVehicleRegistrationYear(appointment.getVehicleRegistrationYear());
+        response.setLastServiceDate(appointment.getLastServiceDate());
+        response.setVehicleType(appointment.getVehicleType());
         return response;
     }
 

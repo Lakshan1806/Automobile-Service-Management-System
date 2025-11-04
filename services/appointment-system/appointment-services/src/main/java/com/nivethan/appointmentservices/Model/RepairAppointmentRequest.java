@@ -46,6 +46,13 @@ public class RepairAppointmentRequest {
     @Column(name = "last_service_date")
     private LocalDate lastServiceDate;
 
+    @Column(name = "vehicle_model_year")
+    private Integer vehicleModelYear;
+
+    @Column(name = "vehicle_registration_year")
+    private Integer vehicleRegistrationYear;
+
+
 //    Data Handled in the Appointment
 
     @Column(name = "manual_start_date")

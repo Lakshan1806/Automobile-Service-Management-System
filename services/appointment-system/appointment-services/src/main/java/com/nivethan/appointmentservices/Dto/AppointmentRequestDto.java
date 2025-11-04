@@ -11,7 +11,6 @@ public class AppointmentRequestDto {
     @NotBlank(message = "Vehicle ID is required")
     private String vehicleId;
 
-    @NotNull(message = "Manual start date is required")
     private LocalDate manualStartDate;
 
     @NotBlank(message = "Repair type is required")
