@@ -1,0 +1,48 @@
+services:
+  # 1. Your Spring Boot Service
+  appointment-service:
+    build: ./appointment-services  # Tells compose to build from the Dockerfile here
+    ports:
+      - "8080:8080" # Maps <your-computer-port>:<container-port>
+    environment:
+      # These OVERRIDE the defaults in your application.properties
+      # We use the service names from this file
+      - DB_URL=jdbc:postgresql://postgres-db:5432/ead_database
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_SECRET_PASSWORD}
+      - FASTAPI_SERVICE_URL=${FAST_API_SERVICE_SUGGESTIONS}
+      # 'host.docker.internal' is a special DNS name that lets the
+      # container talk back to your HOST machine (where your dummies run)
+      - vehicle.service.url=${VEHICLE_SERVICE_URL}
+      # Add the .NET dummy URL here too
+      # - DOTNET_DUMMY_URL=http://host.docker.internal:XXXX/api
+    depends_on:
+      - postgres-db
+      - prediction-service
+
+  # 2. Your FastAPI Service
+  prediction-service:
+    build: ./prediction-services
+    ports:
+      - "8000:8000"
+    environment:
+      # These OVERRIDE the values in your .env file
+      - NODE_API_FINISHED_JOBS=${NODE_API_FINISHED_JOBS}
+      - NODE_API_ALL_JOBS=${NODE_API_ALL_JOBS}
+      # Other .env variables (like MODEL_FILE) will still be loaded from the file
+
+  # 3. PostgreSQL Database Service
+  postgres-db:
+    image: postgres:16 # Pulls the official Postgres image
+    environment:
+      - POSTGRES_DB=ead_database
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_SECRET_PASSWORD}
+    ports:
+      - "5433:5432" # So you can still connect from your local machine if needed
+    volumes:
+      - postgres-data:/var/lib/postgresql/data # This persists your data
+
+# This defines the named volume for data persistence
+volumes:
+  postgres-data:
