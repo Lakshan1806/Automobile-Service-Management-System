@@ -1,3 +1,5 @@
+# training.py
+
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -75,14 +77,18 @@ class EnhancedVehicleRepairModel:
             
         df = pd.DataFrame(data)
         
-        # Required columns check
+        
+        # Required columns
         required_cols = ['vehicleType', 'vehicleBrand', 'repairType', 'millage', 
-                        'lastServiceDate', 'startDate', 'endDate']
+                        'lastServiceDate', 'startDate', 'endDate',
+                        'vehicleModelYear', 'vehicleRegistrationYear']
+        
         missing_cols = [col for col in required_cols if col not in df.columns]
         
         if missing_cols:
             print(f"Missing columns: {missing_cols}")
-            return pd.DataFrame()
+            # Don't fail completely, just print warning
+            print("WARNING: Not all required columns are present. Model accuracy may suffer.")
         
         # Convert dates with error handling
         df['startDate'] = pd.to_datetime(df['startDate'], errors='coerce')
@@ -98,10 +104,14 @@ class EnhancedVehicleRepairModel:
         # Calculate target variable (actual duration in days)
         df['actual_duration_days'] = (df['endDate'] - df['startDate']).dt.days
         
-        # Filter invalid data - REALISTIC DURATIONS
+        # Filter invalid data
         initial_count = len(df)
         df = df[df['actual_duration_days'] > 0]
-        df = df[df['actual_duration_days'] <= 14]  # Max 2 weeks for any repair
+        
+    
+        # Filter for obvious errors (e.g., > 60 days).
+        df = df[df['actual_duration_days'] < 60]
+        
         if len(df) < initial_count:
             print(f"Removed {initial_count - len(df)} rows with unrealistic durations")
         
@@ -134,8 +144,21 @@ class EnhancedVehicleRepairModel:
             9: 'fall', 10: 'fall', 11: 'fall'
         })
         
-        # 2. Vehicle age estimation (simplified)
-        df['vehicle_age'] = np.random.randint(1, 15, len(df))  # More realistic 1-15 years
+        # 2. Vehicle age estimation (using REAL data)
+        current_year = datetime.now().year
+        
+        # Convert years to numeric, handling errors
+        df['vehicleModelYear'] = pd.to_numeric(df['vehicleModelYear'], errors='coerce')
+        df['vehicleRegistrationYear'] = pd.to_numeric(df['vehicleRegistrationYear'], errors='coerce')
+        
+        # Use ModelYear first, fall back to RegistrationYear
+        df['year_to_use'] = df['vehicleModelYear'].fillna(df['vehicleRegistrationYear'])
+        
+        # Calculate age
+        df['vehicle_age'] = current_year - df['year_to_use']
+        
+        # Fill any remaining missing values (e.g., avg 5 years old) and clip to reasonable range
+        df['vehicle_age'] = df['vehicle_age'].fillna(5).clip(lower=0, upper=30)
         
         # 3. Millage-based features
         df['millage'] = pd.to_numeric(df['millage'], errors='coerce').fillna(50000)
@@ -154,7 +177,7 @@ class EnhancedVehicleRepairModel:
         premium_brands = ['mercedes', 'bmw', 'audi', 'lexus', 'volvo', 'jaguar']
         df['is_premium_brand'] = df['vehicleBrand'].isin(premium_brands).astype(int)
         
-        # 6. Repair complexity - FIXED: tire should be simple!
+        # 6. Repair complexity
         complex_repairs = ['engine', 'transmission', 'electrical', 'hybrid', 'ev_system']
         df['is_complex_repair'] = df['repairType'].isin(complex_repairs).astype(int)
         
@@ -177,9 +200,10 @@ class EnhancedVehicleRepairModel:
         numeric_features = []
         categorical_features = []
         
+        # Dynamically find features from our settings list
         for feature in settings.MODEL_FEATURES:
             if feature in df.columns:
-                if df[feature].dtype in ['int64', 'float64']:
+                if df[feature].dtype in ['int64', 'float64', 'int32', 'float32']:
                     numeric_features.append(feature)
                 else:
                     categorical_features.append(feature)
@@ -188,8 +212,12 @@ class EnhancedVehicleRepairModel:
         engineered_numeric = ['high_millage', 'is_premium_brand', 'is_complex_repair', 'month']
         engineered_categorical = ['millage_category']
         
-        numeric_features.extend([f for f in engineered_numeric if f in df.columns])
-        categorical_features.extend([f for f in engineered_categorical if f in df.columns])
+        numeric_features.extend([f for f in engineered_numeric if f in df.columns and f not in numeric_features])
+        categorical_features.extend([f for f in engineered_categorical if f in df.columns and f not in categorical_features])
+        
+        # Remove duplicates
+        numeric_features = list(set(numeric_features))
+        categorical_features = list(set(categorical_features))
         
         print(f"Numeric features: {numeric_features}")
         print(f"Categorical features: {categorical_features}")
@@ -220,10 +248,14 @@ class EnhancedVehicleRepairModel:
         
         # Get feature names after preprocessing
         feature_names = []
-        if 'num' in self.preprocessor.named_transformers_:
-            feature_names.extend(self.preprocessor.named_transformers_['num'].get_feature_names_out())
-        if 'cat' in self.preprocessor.named_transformers_:
-            feature_names.extend(self.preprocessor.named_transformers_['cat'].get_feature_names_out())
+        try:
+            if 'num' in self.preprocessor.named_transformers_:
+                feature_names.extend(self.preprocessor.named_transformers_['num'].get_feature_names_out())
+            if 'cat' in self.preprocessor.named_transformers_:
+                feature_names.extend(self.preprocessor.named_transformers_['cat'].get_feature_names_out())
+        except Exception:
+            # Fallback for older sklearn versions
+            feature_names = ["feature_" + str(i) for i in range(X_processed.shape[1])]
         
         self.feature_names = feature_names
         
