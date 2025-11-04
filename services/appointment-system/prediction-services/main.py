@@ -1,3 +1,5 @@
+# main.py
+
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, validator
 from typing import Optional, List, Dict, Any
@@ -28,6 +30,7 @@ class EnhancedRepairRequest(BaseModel):
     repairType: str
     millage: int
     lastService: str  # Format: "dd-MM-yyyy"
+    vehicleModelYear: int 
     
     @validator('lastService')
     def validate_last_service(cls, v):
@@ -73,6 +76,12 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
     vehicle_brand = request.vehicleBrand.lower()
     repair_type = request.repairType.lower()
     
+    # --- Calculate real vehicle age ---
+    current_year = datetime.now().year
+    vehicle_age = current_year - request.vehicleModelYear
+    vehicle_age = max(0, min(30, vehicle_age)) # Clip to reasonable values
+    # ---
+    
     # Create base features
     features = {
         'vehicleType': vehicle_type,
@@ -80,7 +89,7 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
         'repairType': repair_type,
         'millage': request.millage,
         'days_since_last_service': max(0, days_since_service),
-        'vehicle_age': 5,  # Default - in production, calculate from vehicle data
+        'vehicle_age': vehicle_age,  # Use calculated age
         'season': get_current_season(),
         'high_millage': int(request.millage > settings.HIGH_MILLAGE_THRESHOLD),
         'is_premium_brand': int(vehicle_brand in ['mercedes', 'bmw', 'audi', 'lexus', 'volvo']),
@@ -88,7 +97,31 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
         'month': datetime.now().month
     }
     
-    return pd.DataFrame([features])
+    # Ensure correct feature order
+    final_features = {}
+    
+    # Get all potential feature names from the model preprocessor if available
+    if model_handler.preprocessor:
+        all_feature_names = []
+        try:
+            if 'num' in model_handler.preprocessor.named_transformers_:
+                all_feature_names.extend(model_handler.preprocessor.named_transformers_['num'].get_feature_names_out())
+            if 'cat' in model_handler.preprocessor.named_transformers_:
+                all_feature_names.extend(model_handler.preprocessor.named_transformers_['cat'].get_feature_names_out())
+        except Exception:
+             pass # Will just use the feature dict keys
+        
+        # We only need the *original* feature names, not the one-hot encoded ones
+        original_features_needed = set(settings.MODEL_FEATURES)
+        original_features_needed.update(['high_millage', 'is_premium_brand', 'is_complex_repair', 'month', 'millage_category'])
+        
+        for f_name in original_features_needed:
+            if f_name in features:
+                final_features[f_name] = features[f_name]
+    else:
+        final_features = features
+
+    return pd.DataFrame([final_features])
 
 def get_current_season() -> str:
     """Determine current season."""
@@ -145,6 +178,11 @@ def get_fallback_duration(request: EnhancedRepairRequest) -> int:
         if repair_type in ['engine', 'transmission', 'electrical']:
             base_duration += 1
     
+    # Adjust for age
+    current_year = datetime.now().year
+    if (current_year - request.vehicleModelYear) > 10:
+        base_duration += 1
+    
     # Ensure reasonable duration
     base_duration = max(1, min(10, base_duration))  # Between 1-10 days
     
@@ -153,6 +191,7 @@ def get_fallback_duration(request: EnhancedRepairRequest) -> int:
 async def get_enhanced_prediction(request: EnhancedRepairRequest) -> tuple:
     """Get prediction with confidence estimation."""
     
+    # (RECOMMENDATION: Remove this block once you trust your new model)
     # QUICK FIX: Force simple repairs to realistic durations
     simple_repairs = ['tyre', 'tire', 'oil change', 'general']
     if request.repairType.lower() in simple_repairs:
@@ -174,6 +213,7 @@ async def get_enhanced_prediction(request: EnhancedRepairRequest) -> tuple:
         raw_duration = model_handler.model.predict(X_processed)[0]
         duration = max(1, int(round(raw_duration)))
         
+        # (RECOMMENDATION: Remove this block once you trust your new model)
         # Ensure realistic durations
         if request.repairType.lower() in ['tyre', 'tire'] and duration > 2:
             duration = 1
@@ -212,7 +252,7 @@ async def update_workshop_resources(update: ResourceUpdateRequest):
 @app.post("/api/admin/repair-requirements")
 async def update_repair_requirements(update: RepairRequirementUpdateRequest):
     """Update repair type requirements dynamically."""
-    settings.REPAIR_REQUIREMENTS[update.repair_type] = update.requirements
+    settings.REPAIR_REQUIRIMENTS[update.repair_type] = update.requirements
     return {"message": f"Requirements for {update.repair_type} updated"}
 
 @app.get("/api/admin/configuration", response_model=ConfigurationResponse)
@@ -230,7 +270,9 @@ async def startup_event():
     """Initialize application."""
     # Load model
     if not model_handler.load_model():
-        print("WARNING: Could not load existing model. Training will be triggered on first prediction.")
+        print("WARNING: Could not load existing model. Triggering initial training in background.")
+        # Start training in the background so it doesn't block startup
+        asyncio.create_task(scheduled_retrain())
     
     # Start scheduler
     scheduler = AsyncIOScheduler()
@@ -304,12 +346,15 @@ async def suggest_enhanced_start_date(request: EnhancedRepairRequest):
             if end_date is None:
                 # Estimate end date for ongoing jobs
                 try:
+                    # Added vehicleModelYear to the ongoing job estimation
+                    default_model_year = datetime.now().year - 5 # Assume 5 years old if data is missing
                     ongoing_request = EnhancedRepairRequest(
                         vehicleType=job.get('vehicleType', 'sedan'),
                         vehicleBrand=job.get('vehicleBrand', 'unknown'),
                         repairType=job.get('repairType', 'general'),
                         millage=job.get('millage', 50000),
-                        lastService=job.get('lastServiceDate', datetime.now().strftime("%d-%m-%Y"))
+                        lastService=job.get('lastServiceDate', datetime.now().strftime("%d-%m-%Y")),
+                        vehicleModelYear=job.get('vehicleModelYear', default_model_year)
                     )
                     ongoing_duration, _ = await get_enhanced_prediction(ongoing_request)
                     end_date = start_date + timedelta(days=ongoing_duration)
@@ -318,7 +363,7 @@ async def suggest_enhanced_start_date(request: EnhancedRepairRequest):
                     continue
             
             job_repair_type = job.get('repairType', 'general').lower()
-            job_reqs = settings.REPAIR_REQUIREMENTS.get(
+            job_reqs = settings.REPAIR_REQUIRIMENTS.get(
                 job_repair_type, 
                 settings.REPAIR_REQUIREMENTS["__default__"]
             )
@@ -389,7 +434,7 @@ async def get_model_info():
         "model_type": type(model_handler.model).__name__,
         "features_used": model_handler.feature_names if model_handler.feature_names else [],
         "preprocessor_available": model_handler.preprocessor is not None,
-        "training_date": "Unknown"
+        "training_date": "Unknown" # You could save this in the model artifact
     }
 
 @app.post("/debug/prediction")
@@ -436,7 +481,11 @@ def scheduled_retrain():
     """Scheduled retraining function."""
     print("Starting scheduled retraining...")
     try:
-        success = asyncio.run(train_enhanced_model())
+        # We need to run the async function in a new event loop for a scheduled job
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        success = loop.run_until_complete(train_enhanced_model())
+        
         if success:
             model_handler.load_model()  # Reload the new model
             print("Scheduled retraining completed successfully.")
