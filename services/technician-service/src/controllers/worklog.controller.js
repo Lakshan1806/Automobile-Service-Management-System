@@ -19,3 +19,14 @@ export const getWorklogsForTaskHandler = async (req, res) => {
     return error(res, "Failed to get worklogs", 500, err.message);
   }
 };
+
+export const updateWorklogHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const worklog = await WorklogService.updateWorklog(id, req.body);
+    if (!worklog) return error(res, "Worklog not found", 404);
+    return success(res, worklog, "Worklog updated");
+  } catch (err) {
+    return error(res, "Failed to update worklog", 500, err.message);
+  }
+};
