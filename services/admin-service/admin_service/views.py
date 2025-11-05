@@ -1,11 +1,18 @@
+import logging
+
+import requests
 from django.core.mail import send_mail
 from django.conf import settings
-from rest_framework import generics, status, filters
+from rest_framework import generics, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework.exceptions import APIException
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Employee, Branch, Service, Product
 from .serializers import EmployeeSerializer, BranchSerializer, ServiceSerializer, ProductSerializer
+
+
+logger = logging.getLogger(__name__)
 
 
 # CREATE EMPLOYEE
@@ -15,7 +22,34 @@ class EmployeeCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         emp = serializer.save()
+        self.sync_employee_account(emp)
         self.send_invite_email(emp)
+
+    def sync_employee_account(self, emp):
+        payload = {
+            "employeeId": emp.employee_id,
+            "email": emp.email,
+            "role": emp.role,
+            "inviteToken": str(emp.invite_token),
+        }
+        base_url = getattr(settings, "AUTH_SERVICE_BASE_URL", None)
+        if not base_url:
+            logger.error("AUTH_SERVICE_BASE_URL is not configured; skipping employee account sync.")
+            raise APIException("Authentication service url is not configured")
+
+        url = f"{base_url.rstrip('/')}/api/employees/invite"
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code >= 400:
+                logger.error(
+                    "Failed to sync employee account with authentication service: %s %s",
+                    response.status_code,
+                    response.text,
+                )
+                raise APIException("Failed to sync employee account with authentication service")
+        except requests.RequestException as exc:
+            logger.exception("Error syncing employee account with authentication service")
+            raise APIException("Error syncing employee account with authentication service") from exc
 
     def send_invite_email(self, emp):
         invite_link = f"https://auth.novadrive.com/create-password/{emp.invite_token}/"

@@ -1,6 +1,7 @@
 package com.example.authservice.security;
 
 import com.example.authservice.model.Customer;
+import com.example.authservice.model.EmployeeAccount;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -40,6 +41,21 @@ public class JwtTokenService {
                 .subject(String.valueOf(customer.getId()))
                 .claim("email", customer.getEmail())
                 .claim("name", customer.getName())
+                .claim("type", "customer")
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(expirationSeconds)))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public String generateToken(EmployeeAccount account) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(String.valueOf(account.getId()))
+                .claim("email", account.getEmail())
+                .claim("employeeId", account.getEmployeeId())
+                .claim("role", account.getRole())
+                .claim("type", "employee")
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(expirationSeconds)))
                 .signWith(secretKey)

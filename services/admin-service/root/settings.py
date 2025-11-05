@@ -15,6 +15,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+AUTH_SERVICE_BASE_URL = os.getenv('AUTH_SERVICE_BASE_URL')
 
 # Application definition
 INSTALLED_APPS = [

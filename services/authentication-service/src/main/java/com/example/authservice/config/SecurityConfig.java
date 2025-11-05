@@ -29,6 +29,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/customers/signup", "/api/customers/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/employees/invite").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/employees/activate", "/api/employees/login").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable())
