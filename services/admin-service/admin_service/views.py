@@ -4,8 +4,8 @@ from rest_framework import generics, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Employee, Branch, Service
-from .serializers import EmployeeSerializer, BranchSerializer, ServiceSerializer
+from .models import Employee, Branch, Service, Product
+from .serializers import EmployeeSerializer, BranchSerializer, ServiceSerializer, ProductSerializer
 
 
 # CREATE EMPLOYEE
@@ -136,3 +136,34 @@ class ServiceDeleteView(generics.DestroyAPIView):
     queryset = Service.objects.all()
     serializer_class = ServiceSerializer
     lookup_field = "service_id"
+
+
+# CREATE PRODUCT
+class ProductCreateView(generics.CreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+
+# VIEW ALL PRODUCTS + SEARCH + SORT
+class ProductListView(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['price']
+    ordering = ['price']  # default sort by ascending price
+
+
+# UPDATE PRODUCT
+class ProductUpdateView(generics.UpdateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    lookup_field = 'product_id'
+
+
+# DELETE PRODUCT
+class ProductDeleteView(generics.DestroyAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    lookup_field = 'product_id'

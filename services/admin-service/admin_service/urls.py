@@ -19,6 +19,12 @@ from .views import (
     ServiceUpdateView,
     ServiceDeleteView,
 )
+from .views import (
+    ProductCreateView,
+    ProductListView,
+    ProductUpdateView,
+    ProductDeleteView,
+)
 
 
 urlpatterns = [
@@ -38,4 +44,9 @@ urlpatterns = [
     path("services/", ServiceListView.as_view(), name="service-list"),
     path("services/<int:service_id>/update/", ServiceUpdateView.as_view(), name="service-update"),
     path("services/<int:service_id>/delete/", ServiceDeleteView.as_view(), name="service-delete"),
+
+    path('products/create/', ProductCreateView.as_view(), name='product-create'),
+    path('products/', ProductListView.as_view(), name='product-list'),
+    path('products/<int:product_id>/update/', ProductUpdateView.as_view(), name='product-update'),
+    path('products/<int:product_id>/delete/', ProductDeleteView.as_view(), name='product-delete'),
 ]

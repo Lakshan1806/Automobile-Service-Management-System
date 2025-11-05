@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Branch, Employee, Service
+from .models import Branch, Employee, Service, Product
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,3 +19,17 @@ class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = "__all__"
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ['product_id', 'name', 'description', 'price', 'stock', 'image', 'image_url']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
