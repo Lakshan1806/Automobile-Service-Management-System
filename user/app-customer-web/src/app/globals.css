@@ -21,6 +21,83 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+@utility button-primary {
+  display: inline-flex;
+  align-items: center;
+  color: #020617;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--primary), #22d3ee);
+
+  box-shadow: 0 20px 30px rgba(34, 211, 238, 0.35);
+  &:hover {
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  &:focus-visible {
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+@utility button-secondary {
+  display: inline-flex;
+  align-items: center;
+  color: #020617;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  border: none;
+  cursor: pointer;
+  
+
+  
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  background: rgba(15, 23, 42, 0.6);
+  &:hover {
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  &:focus-visible {
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 * {
   box-sizing: border-box;
@@ -28,15 +105,20 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top right, #1f2937 0%, #030712 55%, #020617 100%);
+  background: radial-gradient(
+    circle at top right,
+    #1f2937 0%,
+    #030712 55%,
+    #020617 100%
+  );
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.app-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
 main {
@@ -94,7 +176,9 @@ a:focus-visible {
   font-weight: 500;
   text-decoration: none;
   color: var(--text-dim);
-  transition: color 0.2s ease, background 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 .nav-links a:hover,
@@ -202,7 +286,11 @@ a:focus-visible {
 }
 
 .hero-card {
-  background: linear-gradient(145deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.12));
+  background: linear-gradient(
+    145deg,
+    rgba(59, 130, 246, 0.12),
+    rgba(14, 165, 233, 0.12)
+  );
   padding: 2rem;
   border-radius: var(--radius);
   border: 1px solid rgba(59, 130, 246, 0.25);
@@ -223,42 +311,6 @@ a:focus-visible {
   gap: 1rem;
 }
 
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: 999px;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: none;
-  cursor: pointer;
-}
-
-.button.primary {
-  background: linear-gradient(135deg, var(--primary), #22d3ee);
-  color: #020617;
-  box-shadow: 0 20px 30px rgba(34, 211, 238, 0.35);
-}
-
-.button.primary:hover,
-.button.primary:focus-visible {
-  transform: translateY(-1px);
-  text-decoration: none;
-}
-
-.button.secondary {
-  border: 1px solid var(--border);
-  color: var(--foreground);
-  background: rgba(15, 23, 42, 0.6);
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 
 .section {
   padding: 4rem 0;
