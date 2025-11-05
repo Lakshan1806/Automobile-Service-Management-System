@@ -2,6 +2,7 @@ import express from "express";
 import {
   createWorklogHandler,
   getWorklogsForTaskHandler,
+  updateWorklogHandler,
 } from "../controllers/worklog.controller.js";
 import { body } from "express-validator";
 import validationMiddleware from "../middleware/validation.middleware.js";
@@ -20,5 +21,7 @@ router.post(
 );
 
 router.get("/task/:taskId", getWorklogsForTaskHandler);
+
+router.put("/:id", updateWorklogHandler);
 
 export default router;
