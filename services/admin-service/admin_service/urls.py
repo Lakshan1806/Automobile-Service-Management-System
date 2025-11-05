@@ -13,6 +13,12 @@ from .views import (
     BranchDeleteView,
     AvailableManagersView
 )
+from .views import (
+    ServiceCreateView,
+    ServiceListView,
+    ServiceUpdateView,
+    ServiceDeleteView,
+)
 
 
 urlpatterns = [
@@ -27,4 +33,9 @@ urlpatterns = [
     path('branches/<int:branch_id>/update/', BranchUpdateView.as_view(), name='branch-update'),
     path('branches/<int:branch_id>/delete/', BranchDeleteView.as_view(), name='branch-delete'),
     path('branches/managers/', AvailableManagersView.as_view(), name='available-managers'),
+
+    path("services/create/", ServiceCreateView.as_view(), name="service-create"),
+    path("services/", ServiceListView.as_view(), name="service-list"),
+    path("services/<int:service_id>/update/", ServiceUpdateView.as_view(), name="service-update"),
+    path("services/<int:service_id>/delete/", ServiceDeleteView.as_view(), name="service-delete"),
 ]

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Branch, Employee
+from .models import Branch, Employee, Service
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,3 +14,8 @@ class BranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
         fields = ['branch_id', 'name', 'location', 'manager', 'manager_name', 'manager_email']
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = "__all__"

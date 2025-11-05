@@ -4,8 +4,8 @@ from rest_framework import generics, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Employee, Branch
-from .serializers import EmployeeSerializer, BranchSerializer
+from .models import Employee, Branch, Service
+from .serializers import EmployeeSerializer, BranchSerializer, ServiceSerializer
 
 
 # CREATE EMPLOYEE
@@ -110,3 +110,29 @@ class AvailableManagersView(generics.ListAPIView):
             for m in managers
         ]
         return Response(data)
+    
+
+# CREATE SERVICE
+class ServiceCreateView(generics.CreateAPIView):
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+
+
+# VIEW ALL SERVICES
+class ServiceListView(generics.ListAPIView):
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+
+
+# UPDATE SERVICE
+class ServiceUpdateView(generics.UpdateAPIView):
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+    lookup_field = "service_id"
+
+
+# DELETE SERVICE
+class ServiceDeleteView(generics.DestroyAPIView):
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+    lookup_field = "service_id"
