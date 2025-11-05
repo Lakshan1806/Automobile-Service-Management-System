@@ -191,7 +191,7 @@ def get_fallback_duration(request: EnhancedRepairRequest) -> int:
 async def get_enhanced_prediction(request: EnhancedRepairRequest) -> tuple:
     """Get prediction with confidence estimation."""
     
-    # (RECOMMENDATION: Remove this block once you trust your new model)
+    # For the Initial Phase - because of not enough data for the Model
     # QUICK FIX: Force simple repairs to realistic durations
     simple_repairs = ['tyre', 'tire', 'oil change', 'general']
     if request.repairType.lower() in simple_repairs:
@@ -213,7 +213,7 @@ async def get_enhanced_prediction(request: EnhancedRepairRequest) -> tuple:
         raw_duration = model_handler.model.predict(X_processed)[0]
         duration = max(1, int(round(raw_duration)))
         
-        # (RECOMMENDATION: Remove this block once you trust your new model)
+        # For the Initial Phase - because of not enough data for the Model
         # Ensure realistic durations
         if request.repairType.lower() in ['tyre', 'tire'] and duration > 2:
             duration = 1
