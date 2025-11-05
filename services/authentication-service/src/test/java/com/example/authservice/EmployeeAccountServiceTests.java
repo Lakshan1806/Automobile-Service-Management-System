@@ -71,7 +71,8 @@ class EmployeeAccountServiceTests {
         assertThat(authResponse.getEmployee().getRole()).isEqualTo("Manager");
 
         // Ensure generated token carries employee context
-        assertThat(jwtTokenService.parseClaims(authResponse.getAccessToken())
-                .get("type", String.class)).isEqualTo("employee");
+        var jwt = jwtTokenService.decodeToken(authResponse.getAccessToken());
+        assertThat(jwt.getClaimAsString("realm")).isEqualTo("employees");
+        assertThat(jwt.getClaimAsStringList("roles")).containsExactly("MANAGER");
     }
 }
