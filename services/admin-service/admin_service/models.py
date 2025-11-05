@@ -19,3 +19,20 @@ class Employee(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.role})"
+    
+
+class Branch(models.Model):
+    branch_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100)
+    location = models.CharField(max_length=200)
+    manager = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'Manager'},  # only show employees with Manager role
+        related_name="managed_branches"
+    )
+
+    def __str__(self):
+        return f"{self.name} - {self.location}"

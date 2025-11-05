@@ -4,8 +4,9 @@ from rest_framework import generics, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Employee
-from .serializers import EmployeeSerializer
+from .models import Employee, Branch
+from .serializers import EmployeeSerializer, BranchSerializer
+
 
 # CREATE EMPLOYEE
 class EmployeeCreateView(generics.CreateAPIView):
@@ -32,7 +33,7 @@ class EmployeeCreateView(generics.CreateAPIView):
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [emp.email], fail_silently=False)
 
 
-# ✅ LIST ALL EMPLOYEES (with filters and search)
+# LIST ALL EMPLOYEES (with filters and search)
 class EmployeeListView(generics.ListAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
@@ -67,3 +68,45 @@ def get_employee_role(request):
         })
     except Employee.DoesNotExist:
         return Response({"error": "User not found"}, status=404)
+    
+
+# CREATE BRANCH
+class BranchCreateView(generics.CreateAPIView):
+    queryset = Branch.objects.all()
+    serializer_class = BranchSerializer
+
+    def get_queryset(self):
+        return Branch.objects.all()
+
+
+# LIST ALL BRANCHES
+class BranchListView(generics.ListAPIView):
+    queryset = Branch.objects.all()
+    serializer_class = BranchSerializer
+
+
+# UPDATE BRANCH
+class BranchUpdateView(generics.UpdateAPIView):
+    queryset = Branch.objects.all()
+    serializer_class = BranchSerializer
+    lookup_field = 'branch_id'
+
+
+# DELETE BRANCH
+class BranchDeleteView(generics.DestroyAPIView):
+    queryset = Branch.objects.all()
+    serializer_class = BranchSerializer
+    lookup_field = 'branch_id'
+
+
+# GET AVAILABLE MANAGERS
+class AvailableManagersView(generics.ListAPIView):
+    serializer_class = BranchSerializer
+
+    def get(self, request, *args, **kwargs):
+        managers = Employee.objects.filter(role="Manager")
+        data = [
+            {"id": m.employee_id, "name": m.name, "email": m.email}
+            for m in managers
+        ]
+        return Response(data)
