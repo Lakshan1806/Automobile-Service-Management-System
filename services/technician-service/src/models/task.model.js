@@ -4,6 +4,7 @@ import { TASK_STATUS } from "../constants/status.constants.js";
 const TaskSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
+  service: { type: mongoose.Schema.Types.ObjectId, ref: "Service" }, 
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Technician" },
   status: {
     type: String,
