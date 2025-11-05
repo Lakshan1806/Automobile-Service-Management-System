@@ -9,5 +9,12 @@ export const getWorklogsForTask = async (taskId) => {
 };
 
 export const updateWorklog = async (id, data) => {
-  return Worklog.findByIdAndUpdate(id, data, { new: true });
+  const worklog = await Worklog.findById(id);
+  if (!worklog) return null;
+
+  Object.assign(worklog, data);
+
+  await worklog.save();
+  
+  return worklog;
 };
