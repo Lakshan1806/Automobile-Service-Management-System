@@ -1,7 +1,9 @@
 package com.example.authservice.security;
 
 import com.example.authservice.model.Customer;
+import com.example.authservice.model.EmployeeAccount;
 import com.example.authservice.repository.CustomerRepository;
+import com.example.authservice.repository.EmployeeAccountRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -28,10 +30,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
     private final CustomerRepository customerRepository;
+    private final EmployeeAccountRepository employeeAccountRepository;
 
-    public JwtAuthenticationFilter(JwtTokenService jwtTokenService, CustomerRepository customerRepository) {
+    public JwtAuthenticationFilter(
+            JwtTokenService jwtTokenService,
+            CustomerRepository customerRepository,
+            EmployeeAccountRepository employeeAccountRepository) {
         this.jwtTokenService = jwtTokenService;
         this.customerRepository = customerRepository;
+        this.employeeAccountRepository = employeeAccountRepository;
     }
 
     @Override
@@ -43,16 +50,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String token = header.substring(7);
                 try {
                     Claims claims = jwtTokenService.parseClaims(token);
-                    Long customerId = Long.valueOf(claims.getSubject());
-                    Optional<Customer> customerOptional = customerRepository.findById(customerId);
-                    if (customerOptional.isPresent()) {
-                        Customer customer = customerOptional.get();
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                new AuthenticatedCustomer(customer.getId(), customer.getName(), customer.getEmail()),
-                                null,
-                                Collections.emptyList());
-                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    String type = claims.get("type", String.class);
+                    if ("employee".equalsIgnoreCase(type)) {
+                        Long accountId = Long.valueOf(claims.getSubject());
+                        Optional<EmployeeAccount> employeeOptional = employeeAccountRepository.findById(accountId);
+                        if (employeeOptional.isPresent()) {
+                            EmployeeAccount employee = employeeOptional.get();
+                            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                    new AuthenticatedEmployee(employee.getId(), employee.getEmployeeId(), employee.getEmail(), employee.getRole()),
+                                    null,
+                                    Collections.emptyList());
+                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        }
+                    } else {
+                        Long customerId = Long.valueOf(claims.getSubject());
+                        Optional<Customer> customerOptional = customerRepository.findById(customerId);
+                        if (customerOptional.isPresent()) {
+                            Customer customer = customerOptional.get();
+                            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                    new AuthenticatedCustomer(customer.getId(), customer.getName(), customer.getEmail()),
+                                    null,
+                                    Collections.emptyList());
+                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        }
                     }
                 } catch (JwtException | IllegalArgumentException ex) {
                     log.debug("Ignoring invalid JWT token", ex);

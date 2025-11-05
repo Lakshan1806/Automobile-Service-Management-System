@@ -69,6 +69,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!--        Apache KAFKA-->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
