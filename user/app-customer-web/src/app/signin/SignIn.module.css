@@ -1,0 +1,25 @@
+.wrap {
+  max-width: 420px;
+  margin: 8rem auto;
+  padding: 2rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.form {
+  display: grid;
+  gap: var(--gap);
+}
+
+.error {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.swap {
+  margin-top: 1rem;
+  text-align: center;
+  color: var(--text-dim);
+}
