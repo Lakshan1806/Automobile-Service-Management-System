@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+import os
 
 class Employee(models.Model):
     ROLE_CHOICES = [
@@ -57,3 +58,20 @@ class Product(models.Model):
 
     def __str__(self):
         return f"{self.name} - Rs.{self.price}"
+    
+    # Delete old image when updating
+    def save(self, *args, **kwargs):
+        try:
+            old_product = Product.objects.get(pk=self.pk)
+            if old_product.image and old_product.image != self.image:
+                if os.path.isfile(old_product.image.path):
+                    os.remove(old_product.image.path)
+        except Product.DoesNotExist:
+            pass  # new product, no old image
+        super().save(*args, **kwargs)
+
+    # Delete image file when product is deleted
+    def delete(self, *args, **kwargs):
+        if self.image and os.path.isfile(self.image.path):
+            os.remove(self.image.path)
+        super().delete(*args, **kwargs)
