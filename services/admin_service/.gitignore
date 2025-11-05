@@ -1,2 +1,12 @@
-venv/
 .env
+venv/
+chroma_store/
+
+# Python cache
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Pytest
+.cache/
+.pytest_cache/
