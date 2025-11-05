@@ -9,6 +9,7 @@ import com.example.authservice.model.EmployeeAccount;
 import com.example.authservice.repository.EmployeeAccountRepository;
 import com.example.authservice.security.JwtTokenService;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -95,8 +96,8 @@ public class EmployeeAccountService {
         }
 
         EmployeeProfileResponse profile = mapToProfile(account);
-        String token = jwtTokenService.generateToken(account);
-        return new EmployeeAuthResponse(profile, token, jwtTokenService.getExpirationSeconds());
+        String token = jwtTokenService.generateEmployeeToken(account);
+        return new EmployeeAuthResponse(profile, token, jwtTokenService.getExpirationSeconds(), "employees", List.of(account.getRole().toUpperCase()));
     }
 
     @Transactional(readOnly = true)
