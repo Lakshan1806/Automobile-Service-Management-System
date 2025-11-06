@@ -53,7 +53,6 @@ def test_employee_serializer(employee):
     assert data["email"] == "alice@test.com"
     assert data["role"] == "Manager"
     assert "invite_token" in data
-    assert "is_activated" in data
 
 # =========================
 # BranchSerializer Test

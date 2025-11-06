@@ -24,3 +24,26 @@ class HasRealmAndRole(BasePermission):
             if role.upper() in user_roles:
                 return True
         return False
+
+
+class HasCustomerRole(BasePermission):
+    """Allow access when the authenticated principal matches required realm/roles for users."""
+
+    message = "You do not have permission to perform this action."
+
+    def has_permission(self, request, view) -> bool:
+        principal = getattr(request, "user", None)
+        if not getattr(principal, "is_authenticated", False):
+            return False
+
+        required_realm = getattr(view, "required_realm", "customers")
+        required_roles = getattr(view, "required_roles", ("CUSTOMER",))
+
+        if required_realm and getattr(principal, "realm", None) != required_realm:
+            return False
+
+        user_roles = {role.upper() for role in getattr(principal, "roles", [])}
+        for role in required_roles:
+            if role.upper() in user_roles:
+                return True
+        return False
