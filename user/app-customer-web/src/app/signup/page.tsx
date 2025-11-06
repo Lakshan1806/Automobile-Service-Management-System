@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { signup } from "@/services/auth";
+import { signup } from "@/app/auth/auth";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [feedback, setFeedback] = useState<null | { type: "success" | "error"; message: string }>(null);
+  const [feedback, setFeedback] = useState<null | {
+    type: "success" | "error";
+    message: string;
+  }>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,7 +89,9 @@ export default function SignupPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              <span className="field-hint">Use at least 8 characters for security.</span>
+              <span className="field-hint">
+                Use at least 8 characters for security.
+              </span>
             </div>
           </div>
 
@@ -94,7 +99,11 @@ export default function SignupPage() {
             <Link href="/signin" className="button secondary">
               Already have an account?
             </Link>
-            <button className="button primary" type="submit" disabled={isLoading}>
+            <button
+              className="button primary"
+              type="submit"
+              disabled={isLoading}
+            >
               {isLoading ? "Creating account..." : "Sign up"}
             </button>
           </div>
