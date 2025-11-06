@@ -50,16 +50,16 @@ public class CustomerService {
 
         CustomerResponse customerResponse = mapToResponse(customer);
         String token = jwtTokenService.generateCustomerToken(customer);
-        return new AuthResponse(customerResponse, token, jwtTokenService.getExpirationSeconds(), "customers", List.of("CUSTOMER"));
+        return new AuthResponse(customerResponse, token, jwtTokenService.getExpirationSeconds(), "customers",
+                List.of("CUSTOMER"));
     }
 
     private CustomerResponse mapToResponse(Customer customer) {
         return new CustomerResponse(
                 customer.getId(),
                 customer.getName(),
-                customer.getEmail(),
-                customer.getCreatedAt()
+                customer.getEmail()
+            
         );
     }
 }
-

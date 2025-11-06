@@ -1,14 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { signin } from "@/services/auth";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signin } from "@/app/auth/auth";
+import { useAuth } from "@/app/auth/AuthContext";
+
+function resolveRedirectTarget(value: string | null): string {
+  if (!value || value.trim().length === 0) {
+    return "/appointments";
+  }
+  const normalized = value.startsWith("/") ? value : `/${value}`;
+  return normalized === "/signin" ? "/appointments" : normalized;
+}
 
 export default function SignInPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
+
+  const redirectTarget = resolveRedirectTarget(searchParams.get("redirect"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [feedback, setFeedback] = useState<null | { type: "success" | "error"; message: string }>(null);
+  const [feedback, setFeedback] = useState<null | {
+    type: "success" | "error";
+    message: string;
+  }>(null);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.replace(redirectTarget);
+    }
+  }, [authLoading, isAuthenticated, redirectTarget, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -17,10 +41,8 @@ export default function SignInPage() {
 
     try {
       const response = await signin({ email, password });
-      setFeedback({
-        type: "success",
-        message: `Welcome back, ${response.customer.name}. Your dashboard will load momentarily.`,
-      });
+      await login(response);
+      router.replace(redirectTarget);
     } catch (error) {
       const message =
         error instanceof Error
@@ -75,7 +97,11 @@ export default function SignInPage() {
             <Link href="/signup" className="button secondary">
               Create account
             </Link>
-            <button className="button primary" type="submit" disabled={isLoading}>
+            <button
+              className="button primary"
+              type="submit"
+              disabled={isLoading}
+            >
               {isLoading ? "Signing in..." : "Sign in"}
             </button>
           </div>

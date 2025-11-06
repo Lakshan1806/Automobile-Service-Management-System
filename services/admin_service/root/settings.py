@@ -116,6 +116,12 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'admin_services.authentication.JwtEmployeeAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
     ]
@@ -123,4 +129,12 @@ REST_FRAMEWORK = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Authentication service configuration
+AUTH_SERVICE_BASE_URL = os.getenv("AUTH_SERVICE_BASE_URL", "http://localhost:8080")
+AUTH_SERVICE_JWKS_URL = os.getenv("AUTH_SERVICE_JWKS_URL", f"{AUTH_SERVICE_BASE_URL}/.well-known/jwks.json")
+AUTH_SERVICE_ISSUER = os.getenv("AUTH_SERVICE_ISSUER", "http://localhost:8080")
+AUTH_SERVICE_AUDIENCE = os.getenv("AUTH_SERVICE_AUDIENCE", "myco-apis")
+AUTH_JWKS_CACHE_SECONDS = int(os.getenv("AUTH_JWKS_CACHE_SECONDS", 300))
+
 

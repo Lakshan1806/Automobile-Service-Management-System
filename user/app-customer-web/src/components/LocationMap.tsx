@@ -13,11 +13,14 @@ import axios from "axios";
 type LatLng = { lat: number; lng: number };
 
 async function fetchRoute(origin: LatLng, destination: LatLng) {
-  const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/route`, {
-    origin,
-    destination,
-    mode: "DRIVE",
-  });
+  const response = await axios.post(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/route`,
+    {
+      origin,
+      destination,
+      mode: "DRIVE",
+    },
+  );
   if (!response) throw new Error("Route fetch failed");
   return response.data;
 }

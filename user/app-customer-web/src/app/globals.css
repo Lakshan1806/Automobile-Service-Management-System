@@ -67,9 +67,7 @@
     box-shadow 0.2s ease;
   border: none;
   cursor: pointer;
-  
 
-  
   border: 1px solid var(--border);
   color: var(--foreground);
   background: rgba(15, 23, 42, 0.6);
@@ -86,18 +84,6 @@
     cursor: not-allowed;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 * {
   box-sizing: border-box;
@@ -138,23 +124,6 @@ a:focus-visible {
 .container {
   width: min(1100px, 92vw);
   margin: 0 auto;
-}
-
-.site-header {
-  background: rgba(8, 12, 24, 0.9);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-.site-header .container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 0;
-  gap: 1rem;
 }
 
 .brand {
@@ -310,7 +279,6 @@ a:focus-visible {
   flex-wrap: wrap;
   gap: 1rem;
 }
-
 
 .section {
   padding: 4rem 0;
