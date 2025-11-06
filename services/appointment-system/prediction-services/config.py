@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
+    # --- ADD THESE ---
+    KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+    PREDICTION_EVENTS_TOPIC: str = "prediction_events"
+
     # FastAPI Configuration
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", 8000))

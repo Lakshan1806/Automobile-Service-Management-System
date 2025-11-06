@@ -1,25 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-
-const links = [
-  { href: "/appointments", label: "Appointments" },
-  { href: "/account", label: "My Garage" },
-  { href: "/roadside-assistance", label: "Roadside" },
-  { href: "/signin", label: "Sign In" },
-];
+import { usePathname, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/app/auth/AuthContext";
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { isAuthenticated, loading, logout } = useAuth();
+
+  const authed = useMemo(
+    () => !loading && isAuthenticated,
+    [loading, isAuthenticated],
+  );
+
+  const navLinks = useMemo(() => {
+    if (authed) {
+      return [
+        { href: "/appointments", label: "Appointments" },
+        { href: "/account", label: "My Garage" },
+        { href: "/roadside-assistance", label: "Roadside Assistance" },
+      ];
+    }
+
+    return [{ href: "/signin", label: "Sign In" }];
+  }, [authed]);
+
+  const ctaLink = authed ? null : { href: "/signup", label: "Get Started" };
 
   const isActive = (href: string) => pathname === href;
 
+  async function handleSignOut() {
+    await logout();
+    setOpen(false);
+    router.replace("/");
+  }
+
   return (
-    <header className="site-header">
-      <div className="container">
+    <header className="bg-[rgba(8, 12, 24, 0.9)] sticky top-0 z-20 border-b border-solid border-[var(--border)] backdrop-blur-md">
+      <div className="flex items-center justify-between gap-4 p-4">
         <Link href="/" className="brand" onClick={() => setOpen(false)}>
           NovaDrive Automotive
         </Link>
@@ -35,7 +56,7 @@ export function Header() {
           <span className="menu-bar" aria-hidden="true" />
         </button>
         <nav className={`nav-links ${open ? "open" : ""}`} aria-label="Main">
-          {links.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -45,13 +66,26 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/signup"
-            className={`cta ${isActive("/signup") ? "active" : ""}`}
-            onClick={() => setOpen(false)}
-          >
-            Get Started
-          </Link>
+          {authed && (
+            <Link
+              href="/"
+              onClick={(event) => {
+                event.preventDefault();
+                handleSignOut();
+              }}
+            >
+              Sign Out
+            </Link>
+          )}
+          {ctaLink && (
+            <Link
+              href={ctaLink.href}
+              className={`cta ${isActive(ctaLink.href) ? "active" : ""}`}
+              onClick={() => setOpen(false)}
+            >
+              {ctaLink.label}
+            </Link>
+          )}
         </nav>
       </div>
     </header>

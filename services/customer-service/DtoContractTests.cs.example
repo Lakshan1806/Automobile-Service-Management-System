@@ -1,0 +1,120 @@
+using Xunit;
+using PaymentApi.Dtos;
+using System.Text.Json;
+
+namespace PaymentApi.Tests
+{
+    public class DtoContractTests
+    {
+        [Fact]
+        public void VehicleSummaryDto_Should_Have_Correct_Property_Names()
+        {
+            // Arrange
+            var dto = new VehicleSummaryDto
+            {
+                vehicleId = "v-123",
+                noPlate = "CP ABC-123",
+                vehicleBrand = "Toyota",
+                vehicleModel = "Corolla"
+            };
+
+            // Act
+            var json = JsonSerializer.Serialize(dto);
+            var deserialized = JsonSerializer.Deserialize<JsonElement>(json);
+
+            // Assert
+            Assert.True(deserialized.TryGetProperty("vehicleId", out _), "Property 'vehicleId' should exist");
+            Assert.True(deserialized.TryGetProperty("noPlate", out _), "Property 'noPlate' should exist");
+            Assert.True(deserialized.TryGetProperty("vehicleBrand", out _), "Property 'vehicleBrand' should exist");
+            Assert.True(deserialized.TryGetProperty("vehicleModel", out _), "Property 'vehicleModel' should exist");
+
+            // Verify exact JSON structure
+            Assert.Contains("\"vehicleId\":\"v-123\"", json);
+            Assert.Contains("\"noPlate\":\"CP ABC-123\"", json);
+            Assert.Contains("\"vehicleBrand\":\"Toyota\"", json);
+            Assert.Contains("\"vehicleModel\":\"Corolla\"", json);
+        }
+
+        [Fact]
+        public void AppointmentDetailsDto_Should_Have_Correct_Property_Names()
+        {
+            // Arrange
+            var dto = new AppointmentDetailsDto
+            {
+                vehicleId = "v-uuid-12345",
+                noPlate = "CP  ABC-123",
+                chaseNo = "JT123456789",
+                vehicleType = "Car",
+                vehicleBrand = "Toyota",
+                customerId = "c-uuid-98765",
+                customerPhone = "+947052333414",
+                customerName = "Nivethan Rajendran",
+                millage = 75000,
+                lastServiceDate = "2025-01-15",
+                vehicleModelYear = 2018,
+                vehicleRegistrationYear = 2018
+            };
+
+            // Act
+            var json = JsonSerializer.Serialize(dto);
+            var deserialized = JsonSerializer.Deserialize<JsonElement>(json);
+
+            // Assert - Check all properties exist
+            Assert.True(deserialized.TryGetProperty("vehicleId", out _), "Property 'vehicleId' should exist");
+            Assert.True(deserialized.TryGetProperty("noPlate", out _), "Property 'noPlate' should exist");
+            Assert.True(deserialized.TryGetProperty("chaseNo", out _), "Property 'chaseNo' should exist");
+            Assert.True(deserialized.TryGetProperty("vehicleType", out _), "Property 'vehicleType' should exist");
+            Assert.True(deserialized.TryGetProperty("vehicleBrand", out _), "Property 'vehicleBrand' should exist");
+            Assert.True(deserialized.TryGetProperty("customerId", out _), "Property 'customerId' should exist");
+            Assert.True(deserialized.TryGetProperty("customerPhone", out _), "Property 'customerPhone' should exist");
+            Assert.True(deserialized.TryGetProperty("customerName", out _), "Property 'customerName' should exist");
+            Assert.True(deserialized.TryGetProperty("millage", out _), "Property 'millage' should exist");
+            Assert.True(deserialized.TryGetProperty("lastServiceDate", out _), "Property 'lastServiceDate' should exist");
+            Assert.True(deserialized.TryGetProperty("vehicleModelYear", out _), "Property 'vehicleModelYear' should exist");
+            Assert.True(deserialized.TryGetProperty("vehicleRegistrationYear", out _), "Property 'vehicleRegistrationYear' should exist");
+
+            // Verify exact values
+            Assert.Contains("\"vehicleId\":\"v-uuid-12345\"", json);
+            Assert.Contains("\"noPlate\":\"CP  ABC-123\"", json);
+            Assert.Contains("\"millage\":75000", json);
+            Assert.Contains("\"customerName\":\"Nivethan Rajendran\"", json);
+        }
+
+        [Fact]
+        public void VehicleSummaryDto_Array_Should_Serialize_Correctly()
+        {
+            // Arrange
+            var dtos = new[]
+            {
+                new VehicleSummaryDto
+                {
+                    vehicleId = "v-uuid-12345",
+                    noPlate = "CP  ABC-123",
+                    vehicleBrand = "Toyota",
+                    vehicleModel = "Corolla"
+                },
+                new VehicleSummaryDto
+                {
+                    vehicleId = "v-uuid-67890",
+                    noPlate = "WP XYZ-789",
+                    vehicleBrand = "Honda",
+                    vehicleModel = "Civic"
+                }
+            };
+
+            // Act
+            var json = JsonSerializer.Serialize(dtos);
+
+            // Assert
+            Assert.Contains("\"vehicleId\":\"v-uuid-12345\"", json);
+            Assert.Contains("\"noPlate\":\"CP  ABC-123\"", json);
+            Assert.Contains("\"vehicleBrand\":\"Toyota\"", json);
+            Assert.Contains("\"vehicleModel\":\"Corolla\"", json);
+            
+            Assert.Contains("\"vehicleId\":\"v-uuid-67890\"", json);
+            Assert.Contains("\"noPlate\":\"WP XYZ-789\"", json);
+            Assert.Contains("\"vehicleBrand\":\"Honda\"", json);
+            Assert.Contains("\"vehicleModel\":\"Civic\"", json);
+        }
+    }
+}

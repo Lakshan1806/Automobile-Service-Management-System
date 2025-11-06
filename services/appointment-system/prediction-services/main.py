@@ -1,7 +1,6 @@
 # main.py
-
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Field
 from typing import Optional, List, Dict, Any
 import joblib
 import pandas as pd
@@ -13,6 +12,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import settings
 from training import EnhancedVehicleRepairModel, train_enhanced_model
+from aiokafka import AIOKafkaProducer
+import json
 
 app = FastAPI(
     title="Enhanced Vehicle Scheduling Prediction API",
@@ -23,7 +24,32 @@ app = FastAPI(
 # Global model handler
 model_handler = EnhancedVehicleRepairModel()
 
-# Pydantic Models for Enhanced Input
+# Global producer
+kafka_producer = None
+
+async def send_prediction_event(event: "PredictionEvent"):
+    """
+    Sends a prediction event to Kafka.
+    This is a true 'fire-and-forget' operation and will not block.
+    """
+    global kafka_producer
+    if kafka_producer is None or not kafka_producer.started:
+        print("ERROR: Kafka producer is not running or connected. Skipping event.")
+        return 
+        
+    try:
+        await kafka_producer.send(
+            settings.PREDICTION_EVENTS_TOPIC,
+            key=event.vehicleType.encode('utf-8'),
+            value=event.json().encode('utf-8')
+        )
+        print(f"Sent audit event: {event.eventType}")
+    except Exception as e:
+        print(f"CRITICAL: Could not send prediction event to Kafka: {e}")
+
+
+# --- Pydantic Models ---
+
 class EnhancedRepairRequest(BaseModel):
     vehicleType: str
     vehicleBrand: str
@@ -63,7 +89,18 @@ class ConfigurationResponse(BaseModel):
     repair_requirements: Dict[str, Dict[str, int]]
     model_features: List[str]
 
-# Enhanced Prediction Functions
+class PredictionEvent(BaseModel):
+    eventType: str # "PREDICTION_REQUESTED", "PREDICTION_CALCULATED", "PREDICTION_FAILED"
+    vehicleType: str
+    repairType: str
+    predictedDuration: Optional[int] = None
+    confidence: Optional[float] = None
+    errorMessage: Optional[str] = None
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+# --- Enhanced Prediction Functions ---
+
 def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
     """Creates features for prediction from request data."""
     
@@ -79,7 +116,7 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
     # --- Calculate real vehicle age ---
     current_year = datetime.now().year
     vehicle_age = current_year - request.vehicleModelYear
-    vehicle_age = max(0, min(30, vehicle_age)) # Clip to reasonable values
+    vehicle_age = max(0, min(30, vehicle_age))
     # ---
     
     # Create base features
@@ -89,7 +126,7 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
         'repairType': repair_type,
         'millage': request.millage,
         'days_since_last_service': max(0, days_since_service),
-        'vehicle_age': vehicle_age,  # Use calculated age
+        'vehicle_age': vehicle_age,
         'season': get_current_season(),
         'high_millage': int(request.millage > settings.HIGH_MILLAGE_THRESHOLD),
         'is_premium_brand': int(vehicle_brand in ['mercedes', 'bmw', 'audi', 'lexus', 'volvo']),
@@ -109,7 +146,7 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
             if 'cat' in model_handler.preprocessor.named_transformers_:
                 all_feature_names.extend(model_handler.preprocessor.named_transformers_['cat'].get_feature_names_out())
         except Exception:
-             pass # Will just use the feature dict keys
+             pass 
         
         # We only need the *original* feature names, not the one-hot encoded ones
         original_features_needed = set(settings.MODEL_FEATURES)
@@ -191,7 +228,7 @@ def get_fallback_duration(request: EnhancedRepairRequest) -> int:
 async def get_enhanced_prediction(request: EnhancedRepairRequest) -> tuple:
     """Get prediction with confidence estimation."""
     
-    # (RECOMMENDATION: Remove this block once you trust your new model)
+    # For the Initial Phase - because of not enough data for the Model
     # QUICK FIX: Force simple repairs to realistic durations
     simple_repairs = ['tyre', 'tire', 'oil change', 'general']
     if request.repairType.lower() in simple_repairs:
@@ -213,7 +250,7 @@ async def get_enhanced_prediction(request: EnhancedRepairRequest) -> tuple:
         raw_duration = model_handler.model.predict(X_processed)[0]
         duration = max(1, int(round(raw_duration)))
         
-        # (RECOMMENDATION: Remove this block once you trust your new model)
+        # For the Initial Phase - because of not enough data for the Model
         # Ensure realistic durations
         if request.repairType.lower() in ['tyre', 'tire'] and duration > 2:
             duration = 1
@@ -239,7 +276,9 @@ async def get_enhanced_prediction(request: EnhancedRepairRequest) -> tuple:
         fallback_duration = get_fallback_duration(request)
         return fallback_duration, 0.5
 
-# API Management Endpoints
+
+# --- API Management Endpoints ---
+
 @app.post("/api/admin/resources")
 async def update_workshop_resources(update: ResourceUpdateRequest):
     """Update workshop resource counts dynamically."""
@@ -264,21 +303,53 @@ async def get_current_configuration():
         model_features=settings.MODEL_FEATURES
     )
 
-# Enhanced API Endpoints
 @app.on_event("startup")
 async def startup_event():
     """Initialize application."""
-    # Load model
+    global kafka_producer
+
+    # 1. Load model
     if not model_handler.load_model():
         print("WARNING: Could not load existing model. Triggering initial training in background.")
-        # Start training in the background so it doesn't block startup
         asyncio.create_task(scheduled_retrain())
     
-    # Start scheduler
+    # 2. Start scheduler
     scheduler = AsyncIOScheduler()
     scheduler.add_job(scheduled_retrain, 'interval', hours=settings.MODEL_RETRAIN_HOURS)
     scheduler.start()
     print(f"Scheduler started. Retraining every {settings.MODEL_RETRAIN_HOURS} hours.")
+    
+    # 3. Start Kafka Producer (with retries)
+    retries = 5
+    while retries > 0:
+        try:
+            print(f"Attempting to connect Kafka producer to {settings.KAFKA_BOOTSTRAP_SERVERS}...")
+            kafka_producer = AIOKafkaProducer(
+                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS
+            )
+            await kafka_producer.start()
+            print("Kafka producer started successfully.")
+            break  # Success! Exit the loop.
+        except Exception as e:
+            print(f"ERROR: Kafka producer connection failed: {e}")
+            retries -= 1
+            if retries > 0:
+                print(f"Retrying in 5 seconds... ({retries} attempts left)")
+                await asyncio.sleep(5) # Wait 5 seconds
+            else:
+                print("FATAL: Kafka producer could not connect. Audit events will not be sent.")
+                kafka_producer = None 
+                
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up application."""
+    global kafka_producer
+    if kafka_producer:
+        await kafka_producer.stop()
+        print("Kafka producer stopped.")
+
+# --- API Endpoints ---
 
 @app.get("/")
 async def root():
@@ -314,109 +385,142 @@ async def predict_enhanced_duration(request: EnhancedRepairRequest):
 async def suggest_enhanced_start_date(request: EnhancedRepairRequest):
     """Enhanced scheduling with comprehensive prediction."""
     
-    if not settings.NODE_API_ALL_JOBS or "your_node_api" in settings.NODE_API_ALL_JOBS:
-        raise HTTPException(status_code=500, detail="API not configured")
-    
-    # Get enhanced prediction
-    needed_duration, confidence = await get_enhanced_prediction(request)
-    
-    # Normalize repair type for requirements lookup
-    repair_type = request.repairType.lower()
-    new_job_reqs = settings.REPAIR_REQUIREMENTS.get(
-        repair_type, 
-        settings.REPAIR_REQUIREMENTS["__default__"]
+    # This call is now non-blocking, it will not hang
+    await send_prediction_event(
+        PredictionEvent(
+            eventType="PREDICTION_REQUESTED",
+            vehicleType=request.vehicleType,
+            repairType=request.repairType
+        )
     )
 
-    # Fetch current jobs
     try:
-        async with httpx.AsyncClient() as client:
-            all_jobs_resp = await client.get(settings.NODE_API_ALL_JOBS)
-            all_jobs_resp.raise_for_status()
-            all_jobs = all_jobs_resp.json()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch jobs: {e}")
-
-    # Build busy schedule
-    busy_schedule = []
-    for job in all_jobs:
-        if job.get('status') in ['Ongoing', 'Scheduled']:
-            start_date = pd.to_datetime(job['startDate'])
-            end_date = pd.to_datetime(job['endDate']) if job.get('endDate') else None
-            
-            if end_date is None:
-                # Estimate end date for ongoing jobs
-                try:
-                    # Added vehicleModelYear to the ongoing job estimation
-                    default_model_year = datetime.now().year - 5 # Assume 5 years old if data is missing
-                    ongoing_request = EnhancedRepairRequest(
-                        vehicleType=job.get('vehicleType', 'sedan'),
-                        vehicleBrand=job.get('vehicleBrand', 'unknown'),
-                        repairType=job.get('repairType', 'general'),
-                        millage=job.get('millage', 50000),
-                        lastService=job.get('lastServiceDate', datetime.now().strftime("%d-%m-%Y")),
-                        vehicleModelYear=job.get('vehicleModelYear', default_model_year)
-                    )
-                    ongoing_duration, _ = await get_enhanced_prediction(ongoing_request)
-                    end_date = start_date + timedelta(days=ongoing_duration)
-                except Exception as e:
-                    print(f"Error estimating end date for job: {e}")
-                    continue
-            
-            job_repair_type = job.get('repairType', 'general').lower()
-            job_reqs = settings.REPAIR_REQUIRIMENTS.get(
-                job_repair_type, 
-                settings.REPAIR_REQUIREMENTS["__default__"]
-            )
-            
-            busy_schedule.append({
-                "start": start_date,
-                "end": end_date,
-                "requirements": job_reqs
-            })
-
-    # Find available slot - start from tomorrow
-    check_date = pd.to_datetime('today').normalize() + timedelta(days=1)
-    max_check_days = 30  # Don't look more than 1 month ahead
-    
-    for day_offset in range(max_check_days):
-        current_check_date = check_date + timedelta(days=day_offset)
-        potential_end_date = current_check_date + timedelta(days=needed_duration - 1)
-        is_slot_available = True
+        if not settings.NODE_API_ALL_JOBS or "your_node_api" in settings.NODE_API_ALL_JOBS:
+            raise HTTPException(status_code=500, detail="API not configured")
         
-        # Check each day in the potential booking period
-        for day in pd.date_range(start=current_check_date, end=potential_end_date):
-            resources_used_today = {resource: 0 for resource in settings.WORKSHOP_RESOURCES}
-            
-            # Calculate resource usage for this day from existing jobs
-            for job in busy_schedule:
-                if job["start"].date() <= day.date() <= job["end"].date():
-                    for resource, amount in job["requirements"].items():
-                        if resource in resources_used_today:
-                            resources_used_today[resource] += amount
-            
-            # Check if we can add the new job
-            for resource, needed_amount in new_job_reqs.items():
-                if resource not in settings.WORKSHOP_RESOURCES:
-                    continue
-                    
-                available = settings.WORKSHOP_RESOURCES[resource]
-                used = resources_used_today[resource]
+        # Get enhanced prediction
+        needed_duration, confidence = await get_enhanced_prediction(request)
+        
+        # Normalize repair type for requirements lookup
+        repair_type = request.repairType.lower()
+        new_job_reqs = settings.REPAIR_REQUIREMENTS.get(
+            repair_type, 
+            settings.REPAIR_REQUIREMENTS["__default__"]
+        )
+
+        # Fetch current jobs
+        try:
+            async with httpx.AsyncClient() as client:
+                all_jobs_resp = await client.get(settings.NODE_API_ALL_JOBS)
+                all_jobs_resp.raise_for_status()
+                all_jobs = all_jobs_resp.json()
+        except Exception as e:
+            # This specific error is about failing to get jobs
+            raise HTTPException(status_code=500, detail=f"Failed to fetch jobs: {e}")
+
+        # Build busy schedule
+        busy_schedule = []
+        for job in all_jobs:
+            if job.get('status') in ['Ongoing', 'Scheduled']:
+                start_date = pd.to_datetime(job['startDate'])
+                end_date = pd.to_datetime(job['endDate']) if job.get('endDate') else None
                 
-                if (used + needed_amount) > available:
-                    is_slot_available = False
+                if end_date is None:
+                    # ... (your logic for estimating end date)
+                    try:
+                        default_model_year = datetime.now().year - 5 
+                        ongoing_request = EnhancedRepairRequest(
+                            vehicleType=job.get('vehicleType', 'sedan'),
+                            vehicleBrand=job.get('vehicleBrand', 'unknown'),
+                            repairType=job.get('repairType', 'general'),
+                            millage=job.get('millage', 50000),
+                            lastService=job.get('lastServiceDate', datetime.now().strftime("%d-%m-%Y")),
+                            vehicleModelYear=job.get('vehicleModelYear', default_model_year)
+                        )
+                        ongoing_duration, _ = await get_enhanced_prediction(ongoing_request)
+                        end_date = start_date + timedelta(days=ongoing_duration)
+                    except Exception as e:
+                        print(f"Error estimating end date for job: {e}")
+                        continue
+                
+                job_repair_type = job.get('repairType', 'general').lower()
+                job_reqs = settings.REPAIR_REQUIRIMENTS.get(
+                    job_repair_type, 
+                    settings.REPAIR_REQUIREMENTS["__default__"]
+                )
+                
+                busy_schedule.append({
+                    "start": start_date,
+                    "end": end_date,
+                    "requirements": job_reqs
+                })
+
+        # Find available slot - start from tomorrow
+        check_date = pd.to_datetime('today').normalize() + timedelta(days=1)
+        max_check_days = 30  # Don't look more than 1 month ahead
+        
+        for day_offset in range(max_check_days):
+            current_check_date = check_date + timedelta(days=day_offset)
+            potential_end_date = current_check_date + timedelta(days=needed_duration - 1)
+            is_slot_available = True
+            
+            # Check each day in the potential booking period
+            for day in pd.date_range(start=current_check_date, end=potential_end_date):
+                resources_used_today = {resource: 0 for resource in settings.WORKSHOP_RESOURCES}
+                
+                # ... (your logic for calculating resource usage)
+                for job in busy_schedule:
+                    if job["start"].date() <= day.date() <= job["end"].date():
+                        for resource, amount in job["requirements"].items():
+                            if resource in resources_used_today:
+                                resources_used_today[resource] += amount
+                
+                # Check if we can add the new job
+                for resource, needed_amount in new_job_reqs.items():
+                    if resource not in settings.WORKSHOP_RESOURCES:
+                        continue
+                    available = settings.WORKSHOP_RESOURCES[resource]
+                    used = resources_used_today[resource]
+                    if (used + needed_amount) > available:
+                        is_slot_available = False
+                        break
+                
+                if not is_slot_available:
                     break
             
-            if not is_slot_available:
-                break
+            if is_slot_available:
+                
+                # This call is also non-blocking
+                await send_prediction_event(
+                    PredictionEvent(
+                        eventType="PREDICTION_CALCULATED",
+                        vehicleType=request.vehicleType,
+                        repairType=request.repairType,
+                        predictedDuration=needed_duration,
+                        confidence=round(confidence, 2)
+                    )
+                )
+                
+                return ScheduleResponse(
+                    suggestedStartDate=current_check_date.strftime('%Y-%m-%d'),
+                    predictedDuration=needed_duration,
+                    confidence=round(confidence, 2)
+                )
         
-        if is_slot_available:
-            return ScheduleResponse(
-                suggestedStartDate=current_check_date.strftime('%Y-%m-%d'),
-                predictedDuration=needed_duration,
-                confidence=round(confidence, 2)
+        # If the loop finishes without returning, no slot was found
+        raise HTTPException(status_code=404, detail="No available slots found in the next 30 days")
+
+    except Exception as e:
+        # This call is also non-blocking
+        await send_prediction_event(
+            PredictionEvent(
+                eventType="PREDICTION_FAILED",
+                vehicleType=request.vehicleType,
+                repairType=request.repairType,
+                errorMessage=str(e)
             )
-    
-    raise HTTPException(status_code=404, detail="No available slots found in the next 30 days")
+        )
+        raise e
 
 @app.post("/training/trigger")
 async def trigger_training(background_tasks: BackgroundTasks):
