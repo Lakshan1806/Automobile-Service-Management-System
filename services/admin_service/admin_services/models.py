@@ -8,7 +8,6 @@ class Employee(models.Model):
         ("Admin", "Admin"),
         ("Manager", "Manager"),
         ("Technician", "Technician"),
-        ("Driver", "Driver"),
     ]
 
     employee_id = models.AutoField(primary_key=True)
@@ -17,7 +16,6 @@ class Employee(models.Model):
     role = models.CharField(max_length=50, choices=ROLE_CHOICES)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     invite_token = models.UUIDField(default=uuid.uuid4, editable=False)
-    is_activated = models.BooleanField(default=False)
 
     class Meta:
         db_table = "admin_services_employee"
