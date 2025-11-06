@@ -5,11 +5,11 @@ Populates database with sample data for testing the admin dashboard
 Run: python create_test_data.py
 """
 
+from django.utils import timezone
 from admin_service.models import (
     User, Employee, Vehicle, Appointment, Service, ServiceAssignment,
     TimeLog, ProgressUpdate, ModificationRequest, Part, ServicePart, Notification
 )
-from django.utils import timezone
 import os
 import django
 from datetime import date, datetime, timedelta

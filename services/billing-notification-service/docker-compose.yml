@@ -1,0 +1,50 @@
+services:
+  # MySQL Database Service
+  db:
+    image: mysql:8.0
+    container_name: automobile_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: notification_service
+    ports:
+      - "3307:3306"  # Use 3307 on host to avoid conflict with local MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - automobile_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django Application Service
+  web:
+    build: .
+    container_name: automobile_django
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_NAME=notification_service
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_HOST=db  # This refers to the 'db' service name
+      - DB_PORT=3306
+      - DJANGO_SETTINGS_MODULE=root.settings
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - automobile_network
+
+volumes:
+  mysql_data:
+
+networks:
+  automobile_network:
+    driver: bridge

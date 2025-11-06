@@ -98,8 +98,9 @@ class SendEmailSerializer(serializers.Serializer):
 
 class SendBillEmailSerializer(serializers.Serializer):
     """Serializer for sending bill email"""
-    email = serializers.EmailField(required=True)
     bill_id = serializers.UUIDField(required=True)
+    # Optional, will use bill's email if not provided
+    email = serializers.EmailField(required=False)
 
 
 class BillNotificationSerializer(serializers.Serializer):
