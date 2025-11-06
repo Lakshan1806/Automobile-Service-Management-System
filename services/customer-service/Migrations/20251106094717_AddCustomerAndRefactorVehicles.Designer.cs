@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PaymentApi.Data;
 
@@ -11,9 +12,11 @@ using PaymentApi.Data;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251106094717_AddCustomerAndRefactorVehicles")]
+    partial class AddCustomerAndRefactorVehicles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -185,77 +188,48 @@ namespace WebApplication1.Migrations
 
                     b.Property<string>("ChaseNo")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("chaseNo")
-                        .HasAnnotation("Relational:JsonPropertyName", "chaseNo");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("createdAt")
-                        .HasAnnotation("Relational:JsonPropertyName", "createdAt");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("CustomerIdFk")
-                        .HasColumnType("int")
-                        .HasColumnName("customerIdFk")
-                        .HasAnnotation("Relational:JsonPropertyName", "customerIdFk");
-
-                    b.Property<string>("CustomerName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("customerName")
-                        .HasAnnotation("Relational:JsonPropertyName", "customerName");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("LastServiceDate")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("lastServiceDate")
-                        .HasAnnotation("Relational:JsonPropertyName", "lastServiceDate");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Millage")
-                        .HasColumnType("int")
-                        .HasColumnName("millage")
-                        .HasAnnotation("Relational:JsonPropertyName", "millage");
+                        .HasColumnType("int");
 
                     b.Property<string>("NoPlate")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("noPlate")
-                        .HasAnnotation("Relational:JsonPropertyName", "noPlate");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("VehicleBrand")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("vehicleBrand")
-                        .HasAnnotation("Relational:JsonPropertyName", "vehicleBrand");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("VehicleId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)")
-                        .HasColumnName("vehicleId");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("VehicleModel")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("vehicleModel")
-                        .HasAnnotation("Relational:JsonPropertyName", "vehicleModel");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("VehicleModelYear")
-                        .HasColumnType("int")
-                        .HasColumnName("vehicleModelYear")
-                        .HasAnnotation("Relational:JsonPropertyName", "vehicleModelYear");
+                        .HasColumnType("int");
 
                     b.Property<int?>("VehicleRegistrationYear")
-                        .HasColumnType("int")
-                        .HasColumnName("vehicleRegistrationYear")
-                        .HasAnnotation("Relational:JsonPropertyName", "vehicleRegistrationYear");
+                        .HasColumnType("int");
 
                     b.Property<string>("VehicleType")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("vehicleType")
-                        .HasAnnotation("Relational:JsonPropertyName", "vehicleType");
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
