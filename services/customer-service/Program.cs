@@ -1,25 +1,68 @@
+using Microsoft.EntityFrameworkCore;
+using PaymentApi.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorPages();
+// ---------------------------
+// Add services to the container
+// ---------------------------
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// ---------------------------
+// Add DbContext with SQL Server
+// ---------------------------
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ---------------------------
+// Enable CORS for React frontend
+// ---------------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactLocal", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173") // React dev server port
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+              //.AllowCredentials(); // Uncomment only if you use cookies/auth
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+// ---------------------------
+// Configure middleware
+// ---------------------------
+
+// Use developer exception page for easier debugging (in development)
+if (app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    app.UseDeveloperExceptionPage();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "PaymentApi v1");
+        c.RoutePrefix = string.Empty; // Swagger at root
+    });
+}
+else
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "PaymentApi v1");
+    });
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+// ✅ Must be before UseAuthorization
+app.UseCors("AllowReactLocal");
 
-app.UseRouting();
+app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-app.MapRazorPages();
+app.MapControllers();
 
 app.Run();

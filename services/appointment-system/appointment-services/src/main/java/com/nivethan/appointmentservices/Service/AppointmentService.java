@@ -7,7 +7,9 @@ import com.nivethan.appointmentservices.Repository.RepairAppointmentRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -25,9 +27,14 @@ public class AppointmentService {
     private final FastApiServiceClient fastApiServiceClient;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+    
+    public Mono<List<VehicleSummaryDto>> getVehiclesForCustomer(String customerId) {
+        log.info("Service: Getting vehicle summary list for customer: {}", customerId);
+        return vehicleServiceClient.getVehiclesForCustomer(customerId);
+    }
 
     @Transactional
-    public AppointmentResponseDto createAppointment(AppointmentRequestDto requestDto) {
+    public AppointmentResponseDto createAppointment(AppointmentRequestDto requestDto, String loggedInCustomerId) {
         try {
             log.info("Creating appointment for vehicle ID: {}", requestDto.getVehicleId());
 
@@ -37,6 +44,13 @@ public class AppointmentService {
 
             if (vehicleData == null) {
                 throw new RuntimeException("Vehicle not found with ID: " + requestDto.getVehicleId());
+            }
+
+//            Security Checks
+            if (!vehicleData.getCustomerId().equals(loggedInCustomerId)) {
+                log.warn("SECURITY VIOLATION: Customer {} tried to book for vehicle {} owned by {}",
+                        loggedInCustomerId, vehicleData.getVehicleId(), vehicleData.getCustomerId());
+                throw new AccessDeniedException("You do not have permission to make appointments for this vehicle.");
             }
 
             log.info("Successfully retrieved vehicle data: {}", vehicleData.getVehicleId());
@@ -71,6 +85,7 @@ public class AppointmentService {
 
         } catch (Exception e) {
             log.error("Error creating appointment for vehicle ID: {}", requestDto.getVehicleId(), e);
+            if (e instanceof AccessDeniedException) { throw (AccessDeniedException) e; } // Re-throw
             throw new RuntimeException("Failed to create appointment: " + e.getMessage());
         }
     }
@@ -126,23 +141,66 @@ public class AppointmentService {
                 .collect(Collectors.toList());
     }
 
-    public AppointmentResponseDto getAppointmentById(Long id) {
-        RepairAppointmentRequest appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + id));
+    public AppointmentResponseDto getAppointmentById(Long id,String loggedInCustomerId) {
+        log.info("Fetching appointment {} for customer {}", id, loggedInCustomerId);
+
+        RepairAppointmentRequest appointment = appointmentRepository.findByIdAndCustomerId(id, loggedInCustomerId)
+                .orElseThrow(() -> {
+                    log.warn("Security: Customer {} attempted to access non-existent or unauthorized appointment {}",
+                            loggedInCustomerId, id);
+                    // Throw a generic "not found" to prevent attackers from guessing IDs
+                    return new RuntimeException("Appointment not found with ID: " + id);
+                });
+
         return convertToResponseDto(appointment);
     }
 
-    public List<AppointmentResponseDto> getAppointmentsByVehicleId(String vehicleId) {
+    public List<AppointmentResponseDto> getAppointmentsByVehicleId(String vehicleId, String loggedInCustomerId) {
+
+        log.info("Fetching appointments for vehicle {} by customer {}", vehicleId, loggedInCustomerId);
+
+        // Step 1: Verify the user owns this vehicle
+        VehicleDataDto vehicleData = vehicleServiceClient.getVehicleData(vehicleId).block();
+
+        if (vehicleData == null) {
+            throw new RuntimeException("Vehicle not found with ID: " + vehicleId);
+        }
+
+        if (!vehicleData.getCustomerId().equals(loggedInCustomerId)) {
+            log.warn("SECURITY VIOLATION: Customer {} tried to list appointments for vehicle {} owned by {}",
+                    loggedInCustomerId, vehicleId, vehicleData.getCustomerId());
+            throw new AccessDeniedException("You do not have permission to view appointments for this vehicle.");
+        }
+
+        // Step 2: If check passes, get the appointments
         return appointmentRepository.findByVehicleId(vehicleId).stream()
                 .map(this::convertToResponseDto)
                 .collect(Collectors.toList());
+
+
     }
 
+    // --- MODIFY THIS METHOD ---
     @Transactional
-    public AppointmentResponseDto updateAppointmentStatus(Long id, AppointmentStatus status) {
-        RepairAppointmentRequest appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + id));
+    public AppointmentResponseDto updateAppointmentStatus(Long id, AppointmentStatus status,String loggedInCustomerId) {
+//        RepairAppointmentRequest appointment = appointmentRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + id));
+//
+//        appointment.setStatus(status);
+//        RepairAppointmentRequest updatedAppointment = appointmentRepository.save(appointment);
+//
+//        return convertToResponseDto(updatedAppointment);
+        log.info("Updating status for appointment {} by customer {}", id, loggedInCustomerId);
 
+        // First, get the appointment using the *secure* method
+        RepairAppointmentRequest appointment = appointmentRepository.findByIdAndCustomerId(id, loggedInCustomerId)
+                .orElseThrow(() -> {
+                    log.warn("Security: Customer {} attempted to update non-existent or unauthorized appointment {}",
+                            loggedInCustomerId, id);
+                    return new RuntimeException("Appointment not found with ID: " + id);
+                });
+
+        // If we're here, the user is authorized.
         appointment.setStatus(status);
         RepairAppointmentRequest updatedAppointment = appointmentRepository.save(appointment);
 

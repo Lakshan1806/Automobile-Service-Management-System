@@ -59,11 +59,9 @@ public class FastApiServiceClient {
     private Mono<FastApiResponseDto> createFallbackResponse(FastApiRequestDto request) {
         // Create a fallback response when FastAPI is unavailable
         FastApiResponseDto fallback = new FastApiResponseDto();
-        // You can set some default values here
+        // Fallback logic : Default
         fallback.setPredictedDuration(5); // default 5 days
-        fallback.setConfidence(0.0); // 0% accuracy for fallback
-        // You might want to calculate a simple suggested start date based on manual start date
-        // For now, we'll return null for suggestedStartDate and handle it in the service
+        fallback.setConfidence(0.0); // no confidence 
 
         log.info("Using fallback response for FastAPI");
         return Mono.just(fallback);
