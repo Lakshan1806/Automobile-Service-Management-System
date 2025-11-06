@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "E:\\Dev-Drive\\Projects\\Automobile-Service-Management-System\\customer-service\\WebApplication1.csproj": {}
+    "C:\\Users\\chaje\\Desktop\\EAD\\BN\\bn\\WebApplication1.csproj": {}
   },
   "projects": {
-    "E:\\Dev-Drive\\Projects\\Automobile-Service-Management-System\\customer-service\\WebApplication1.csproj": {
+    "C:\\Users\\chaje\\Desktop\\EAD\\BN\\bn\\WebApplication1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\Dev-Drive\\Projects\\Automobile-Service-Management-System\\customer-service\\WebApplication1.csproj",
+        "projectUniqueName": "C:\\Users\\chaje\\Desktop\\EAD\\BN\\bn\\WebApplication1.csproj",
         "projectName": "WebApplication1",
-        "projectPath": "E:\\Dev-Drive\\Projects\\Automobile-Service-Management-System\\customer-service\\WebApplication1.csproj",
-        "packagesPath": "C:\\Users\\laksh\\.nuget\\packages\\",
-        "outputPath": "E:\\Dev-Drive\\Projects\\Automobile-Service-Management-System\\customer-service\\obj\\",
+        "projectPath": "C:\\Users\\chaje\\Desktop\\EAD\\BN\\bn\\WebApplication1.csproj",
+        "packagesPath": "C:\\Users\\chaje\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\chaje\\Desktop\\EAD\\BN\\bn\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\laksh\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\chaje\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,6 +26,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -49,6 +50,30 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.10, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.0.10, )"
+            },
+            "Microsoft.EntityFrameworkCore.InMemory": {
+              "target": "Package",
+              "version": "[9.0.10, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[9.0.10, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -68,7 +93,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
