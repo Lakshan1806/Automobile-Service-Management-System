@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views
+from .views import AskQuestionView
 
 urlpatterns = [
-    path("ask/", views.ask_question, name="ask_question"),
+    path("ask/", AskQuestionView.as_view(), name="ask_question"),
 ]
