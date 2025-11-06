@@ -40,6 +40,7 @@ build/
 
 # Spring Boot properties
 application.properties
+application-prod.properties
 application.yml
 *.keystore
 

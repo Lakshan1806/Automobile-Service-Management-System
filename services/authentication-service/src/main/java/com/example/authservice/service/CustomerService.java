@@ -7,6 +7,7 @@ import com.example.authservice.dto.SignupRequest;
 import com.example.authservice.model.Customer;
 import com.example.authservice.repository.CustomerRepository;
 import com.example.authservice.security.JwtTokenService;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -48,8 +49,8 @@ public class CustomerService {
         }
 
         CustomerResponse customerResponse = mapToResponse(customer);
-        String token = jwtTokenService.generateToken(customer);
-        return new AuthResponse(customerResponse, token, jwtTokenService.getExpirationSeconds());
+        String token = jwtTokenService.generateCustomerToken(customer);
+        return new AuthResponse(customerResponse, token, jwtTokenService.getExpirationSeconds(), "customers", List.of("CUSTOMER"));
     }
 
     private CustomerResponse mapToResponse(Customer customer) {
