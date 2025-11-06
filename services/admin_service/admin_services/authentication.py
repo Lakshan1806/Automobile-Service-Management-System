@@ -136,3 +136,37 @@ class JwtEmployeeAuthentication(BaseAuthentication):
 
     def authenticate_header(self, request) -> str:
         return self.keyword
+    
+class JwtCustomerAuthentication(BaseAuthentication):
+    """Authenticate requests using RS256 JWTs for customer/user realm."""
+
+    keyword = "Bearer"
+
+    def authenticate(self, request) -> Optional[Tuple[AuthenticatedPrincipal, str]]:
+        header = request.headers.get("Authorization")
+        if not header:
+            return None
+
+        parts = header.split()
+        if parts[0].lower() != "bearer" or len(parts) != 2:
+            raise exceptions.AuthenticationFailed("Authorization header must contain Bearer token")
+
+        token = parts[1]
+        claims = _decode(token)
+
+        # Ensure it's a user token (not employee)
+        if claims.get("realm") != "customers":
+            raise exceptions.AuthenticationFailed("Token not issued for user realm")
+
+        principal = AuthenticatedPrincipal(
+            subject=claims.get("sub"),
+            email=claims.get("email"),
+            realm=claims.get("realm"),
+            roles=[role.upper() for role in claims.get("roles", [])],
+            claims=claims,
+        )
+        return principal, token
+
+    def authenticate_header(self, request) -> str:
+        return self.keyword
+

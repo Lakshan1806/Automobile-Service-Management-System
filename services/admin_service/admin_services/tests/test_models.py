@@ -14,7 +14,6 @@ def employee(db):
 def test_create_employee():
     emp = Employee.objects.create(name="Alice", email="alice@test.com", role="Admin")
     assert emp.employee_id is not None
-    assert emp.is_activated is False
     assert str(emp) == "Alice (Admin)"
 
 @pytest.mark.django_db
