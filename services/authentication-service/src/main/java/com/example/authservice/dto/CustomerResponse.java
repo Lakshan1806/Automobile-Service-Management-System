@@ -7,16 +7,14 @@ public class CustomerResponse {
     private Long id;
     private String name;
     private String email;
-    private OffsetDateTime createdAt;
 
     public CustomerResponse() {
     }
 
-    public CustomerResponse(Long id, String name, String email, OffsetDateTime createdAt) {
+    public CustomerResponse(Long id, String name, String email) {
         this.id = id;
         this.name = name;
         this.email = email;
-        this.createdAt = createdAt;
     }
 
     public Long getId() {
@@ -43,11 +41,4 @@ public class CustomerResponse {
         this.email = email;
     }
 
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
 }

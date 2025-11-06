@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/employees")
-@CrossOrigin(origins = "http://localhost:3000")
+
 public class EmployeeAuthController {
 
     private final EmployeeAccountService employeeAccountService;
