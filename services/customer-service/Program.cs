@@ -1,12 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using PaymentApi.Data;
+using PaymentApi.Repositories;
+using PaymentApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ---------------------------
 // Add services to the container
 // ---------------------------
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Preserve property names as defined (camelCase in DTOs)
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -15,6 +23,11 @@ builder.Services.AddSwaggerGen();
 // ---------------------------
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ---------------------------
+// Register Repositories and Services
+// ---------------------------
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // ---------------------------
 // Enable CORS for React frontend
@@ -58,6 +71,9 @@ else
 
 // ✅ Must be before UseAuthorization
 app.UseCors("AllowReactLocal");
+
+// ✅ Add Auth User Context Middleware
+app.UseMiddleware<AuthUserContextMiddleware>();
 
 app.UseHttpsRedirection();
 
