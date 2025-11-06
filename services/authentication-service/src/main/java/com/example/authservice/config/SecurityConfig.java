@@ -27,7 +27,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/.well-known/jwks.json").permitAll()
-                        .requestMatchers("/api/customers/signup", "/api/customers/login").permitAll()
+                        .requestMatchers("/api/customers/signup", "/api/customers/login", "/api/customers/me").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/employees/invite").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/employees/activate", "/api/employees/login").permitAll()
                         .anyRequest().authenticated())
@@ -44,7 +44,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:3000"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:3000"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
