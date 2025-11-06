@@ -26,6 +26,9 @@ public class AppointmentService {
     private final VehicleServiceClient vehicleServiceClient;
     private final FastApiServiceClient fastApiServiceClient;
 
+    private final KafkaAuditProducer kafkaAuditProducer;
+    // ---
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
     
     public Mono<List<VehicleSummaryDto>> getVehiclesForCustomer(String customerId) {
@@ -81,10 +84,31 @@ public class AppointmentService {
             RepairAppointmentRequest savedAppointment = appointmentRepository.save(appointment);
             log.info("Successfully created appointment with ID: {}", savedAppointment.getId());
 
+
+            // --- NEW KAFKA LOGIC (SUCCESS) ---
+            kafkaAuditProducer.sendAppointmentEvent(
+                    AppointmentEvent.builder()
+                            .eventType("APPOINTMENT_CREATED")
+                            .appointmentId(savedAppointment.getId())
+                            .vehicleId(savedAppointment.getVehicleId())
+                            .repairType(savedAppointment.getRepairType())
+                            .status(savedAppointment.getStatus().name())
+                            .build()
+            );
+            // --- END OF NEW LOGIC ---
             return convertToResponseDto(savedAppointment);
 
         } catch (Exception e) {
             log.error("Error creating appointment for vehicle ID: {}", requestDto.getVehicleId(), e);
+            // --- NEW KAFKA LOGIC (FAILURE) ---
+            kafkaAuditProducer.sendAppointmentEvent(
+                    AppointmentEvent.builder()
+                            .eventType("APPOINTMENT_FAILED")
+                            .vehicleId(requestDto.getVehicleId())
+                            .repairType(requestDto.getRepairType())
+                            .errorMessage(e.getMessage().substring(0, Math.min(e.getMessage().length(), 255)))
+                            .build()
+            );
             if (e instanceof AccessDeniedException) { throw (AccessDeniedException) e; } // Re-throw
             throw new RuntimeException("Failed to create appointment: " + e.getMessage());
         }
@@ -183,13 +207,7 @@ public class AppointmentService {
     // --- MODIFY THIS METHOD ---
     @Transactional
     public AppointmentResponseDto updateAppointmentStatus(Long id, AppointmentStatus status,String loggedInCustomerId) {
-//        RepairAppointmentRequest appointment = appointmentRepository.findById(id)
-//                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + id));
-//
-//        appointment.setStatus(status);
-//        RepairAppointmentRequest updatedAppointment = appointmentRepository.save(appointment);
-//
-//        return convertToResponseDto(updatedAppointment);
+
         log.info("Updating status for appointment {} by customer {}", id, loggedInCustomerId);
 
         // First, get the appointment using the *secure* method
