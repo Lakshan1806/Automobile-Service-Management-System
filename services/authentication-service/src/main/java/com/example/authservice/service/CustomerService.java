@@ -19,14 +19,17 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
+    private final UserProfileClient userProfileClient;
 
     public CustomerService(
             CustomerRepository customerRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenService jwtTokenService) {
+            JwtTokenService jwtTokenService,
+            UserProfileClient userProfileClient) {
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenService = jwtTokenService;
+        this.userProfileClient = userProfileClient;
     }
 
     public CustomerResponse register(SignupRequest request) {
@@ -36,6 +39,7 @@ public class CustomerService {
         String hashedPassword = passwordEncoder.encode(request.getPassword());
         Customer customer = new Customer(request.getName(), request.getEmail(), hashedPassword);
         Customer saved = customerRepository.save(customer);
+        userProfileClient.createCustomerProfile(saved.getId());
         return mapToResponse(saved);
     }
 
@@ -59,7 +63,6 @@ public class CustomerService {
                 customer.getId(),
                 customer.getName(),
                 customer.getEmail()
-            
         );
     }
 }
