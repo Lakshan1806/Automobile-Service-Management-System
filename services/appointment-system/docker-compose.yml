@@ -16,9 +16,13 @@ services:
       - vehicle.service.url=${VEHICLE_SERVICE_URL}
       # Add the .NET dummy URL here too
       # - DOTNET_DUMMY_URL=http://host.docker.internal:XXXX/api
+      # --- ADD THIS LINE ---
+      # - spring.kafka.bootstrap-servers=kafka:9092 # Tells Spring to find the service named 'kafka'
+      - spring.kafka.bootstrap-servers=kafka:29092
     depends_on:
       - postgres-db
       - prediction-service
+      - kafka # <-- ADD KAFKA HERE
 
   # 2. Your FastAPI Service
   prediction-service:
@@ -30,6 +34,10 @@ services:
       - NODE_API_FINISHED_JOBS=${NODE_API_FINISHED_JOBS}
       - NODE_API_ALL_JOBS=${NODE_API_ALL_JOBS}
       # Other .env variables (like MODEL_FILE) will still be loaded from the file
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+    depends_on:
+      - kafka # <-- Make sure FastAPI waits for Kafka
 
   # 3. PostgreSQL Database Service
   postgres-db:
@@ -42,6 +50,31 @@ services:
       - "5433:5432" # So you can still connect from your local machine if needed
     volumes:
       - postgres-data:/var/lib/postgresql/data # This persists your data
+
+  kafka:
+    image: apache/kafka:4.1.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - CLUSTER_ID=ci_Nivethan_Project_123
+
+      # Corrected Listeners
+      - KAFKA_LISTENERS=PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://0.0.0.0:9092,CONTROLLER://kafka:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      
+      # --- THIS IS THE FIX ---
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT_INTERNAL
+      # ---
+      
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
 
 # This defines the named volume for data persistence
 volumes:
