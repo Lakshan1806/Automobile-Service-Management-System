@@ -3,27 +3,26 @@
 import { api } from "./api";
 
 export type Customer = {
-  id: number;
+  id: string;
   name: string;
   email: string;
-  createdAt: string;
 };
 
 export type SigninPayload = { email: string; password: string };
 export type SignupPayload = { name: string; email: string; password: string };
 
 export type SigninResponse = Customer;
-export type SignupResponse = { message: string };
+export type SignupResponse = { message: string; name: string; email: string };
 
 export async function signin(payload: SigninPayload): Promise<SigninResponse> {
-  await api.post("/api/customers/login", payload);
+  await api.post("/api/login", payload);
   const { data } = await api.get<{ customer: Customer }>("/api/customers/me");
   return data.customer;
 }
 
 export async function signup(payload: SignupPayload): Promise<SignupResponse> {
   const { data } = await api.post<SignupResponse>(
-    "/api/customers/signup",
+    "/api/signup",
     payload,
   );
   return data;

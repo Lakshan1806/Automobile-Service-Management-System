@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { Protected } from "@/app/auth/Protected";
 
 type GarageVehicle = {
   id: string;
@@ -54,17 +55,23 @@ const initialForm: VehicleForm = {
   primary: false,
 };
 
-export default function AccountPage() {
+function AccountContent() {
   const [vehicles, setVehicles] = useState(initialGarage);
   const [form, setForm] = useState(initialForm);
-  const [feedback, setFeedback] = useState<null | { type: "success" | "error"; message: string }>(null);
+  const [feedback, setFeedback] = useState<null | {
+    type: "success" | "error";
+    message: string;
+  }>(null);
 
   const totalMileage = useMemo(
     () => vehicles.reduce((total, vehicle) => total + vehicle.mileage, 0),
-    [vehicles]
+    [vehicles],
   );
 
-  function handleChange<K extends keyof VehicleForm>(key: K, value: VehicleForm[K]) {
+  function handleChange<K extends keyof VehicleForm>(
+    key: K,
+    value: VehicleForm[K],
+  ) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -77,7 +84,10 @@ export default function AccountPage() {
     setFeedback(null);
 
     if (!form.year || !form.model || !form.vin) {
-      setFeedback({ type: "error", message: "Please complete the required fields." });
+      setFeedback({
+        type: "error",
+        message: "Please complete the required fields.",
+      });
       return;
     }
 
@@ -105,7 +115,10 @@ export default function AccountPage() {
       return [...nextVehicles, newVehicle];
     });
 
-    setFeedback({ type: "success", message: `${newVehicle.nickname} was added to your garage.` });
+    setFeedback({
+      type: "success",
+      message: `${newVehicle.nickname} was added to your garage.`,
+    });
     resetForm();
   }
 
@@ -152,7 +165,9 @@ export default function AccountPage() {
                 <input
                   id="nickname"
                   value={form.nickname}
-                  onChange={(event) => handleChange("nickname", event.target.value)}
+                  onChange={(event) =>
+                    handleChange("nickname", event.target.value)
+                  }
                   placeholder="Family SUV"
                 />
               </div>
@@ -170,7 +185,9 @@ export default function AccountPage() {
                 <input
                   id="model"
                   value={form.model}
-                  onChange={(event) => handleChange("model", event.target.value)}
+                  onChange={(event) =>
+                    handleChange("model", event.target.value)
+                  }
                   placeholder="NovaDrive Pulse EV"
                   required
                 />
@@ -180,7 +197,9 @@ export default function AccountPage() {
                 <input
                   id="vin"
                   value={form.vin}
-                  onChange={(event) => handleChange("vin", event.target.value.toUpperCase())}
+                  onChange={(event) =>
+                    handleChange("vin", event.target.value.toUpperCase())
+                  }
                   placeholder="17-character VIN"
                   minLength={11}
                   maxLength={17}
@@ -192,7 +211,12 @@ export default function AccountPage() {
                 <input
                   id="mileage"
                   value={form.mileage}
-                  onChange={(event) => handleChange("mileage", event.target.value.replace(/[^0-9,]/g, ""))}
+                  onChange={(event) =>
+                    handleChange(
+                      "mileage",
+                      event.target.value.replace(/[^0-9,]/g, ""),
+                    )
+                  }
                   placeholder="34,780"
                 />
               </div>
@@ -201,7 +225,9 @@ export default function AccountPage() {
                   <input
                     type="checkbox"
                     checked={form.primary}
-                    onChange={(event) => handleChange("primary", event.target.checked)}
+                    onChange={(event) =>
+                      handleChange("primary", event.target.checked)
+                    }
                   />
                   Set as primary vehicle
                 </label>
@@ -234,14 +260,17 @@ export default function AccountPage() {
                   </h3>
                   <p>{vehicle.model}</p>
                 </div>
-                {vehicle.primary && <span className="primary-badge">Primary</span>}
+                {vehicle.primary && (
+                  <span className="primary-badge">Primary</span>
+                )}
               </div>
               <div className="vehicle-meta">
                 <p>
                   <strong>VIN:</strong> {vehicle.vin}
                 </p>
                 <p>
-                  <strong>Mileage:</strong> {vehicle.mileage.toLocaleString()} miles
+                  <strong>Mileage:</strong> {vehicle.mileage.toLocaleString()}{" "}
+                  miles
                 </p>
                 <p>
                   <strong>Last service:</strong> {vehicle.lastService}
@@ -255,5 +284,13 @@ export default function AccountPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Protected redirectTo="/account">
+      <AccountContent />
+    </Protected>
   );
 }

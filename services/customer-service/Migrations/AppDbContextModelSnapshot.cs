@@ -22,6 +22,48 @@ namespace WebApplication1.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("PaymentApi.Models.Customer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("AuthUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthUserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Customers_AuthUserId");
+
+                    b.ToTable("Customers");
+                });
+
             modelBuilder.Entity("PaymentApi.Models.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -141,49 +183,105 @@ namespace WebApplication1.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Brand")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ChassisNo")
+                    b.Property<string>("ChaseNo")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("chaseNo")
+                        .HasAnnotation("Relational:JsonPropertyName", "chaseNo");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasAnnotation("Relational:JsonPropertyName", "createdAt");
 
-                    b.Property<string>("CustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("CustomerIdFk")
+                        .HasColumnType("int")
+                        .HasColumnName("customerIdFk")
+                        .HasAnnotation("Relational:JsonPropertyName", "customerIdFk");
 
-                    b.Property<string>("CustomerPhone")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("customerName")
+                        .HasAnnotation("Relational:JsonPropertyName", "customerName");
 
                     b.Property<DateTime?>("LastServiceDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("lastServiceDate")
+                        .HasAnnotation("Relational:JsonPropertyName", "lastServiceDate");
 
-                    b.Property<int>("Mileage")
-                        .HasColumnType("int");
+                    b.Property<int>("Millage")
+                        .HasColumnType("int")
+                        .HasColumnName("millage")
+                        .HasAnnotation("Relational:JsonPropertyName", "millage");
+
+                    b.Property<string>("NoPlate")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("noPlate")
+                        .HasAnnotation("Relational:JsonPropertyName", "noPlate");
+
+                    b.Property<string>("VehicleBrand")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("vehicleBrand")
+                        .HasAnnotation("Relational:JsonPropertyName", "vehicleBrand");
 
                     b.Property<string>("VehicleId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("vehicleId");
 
                     b.Property<string>("VehicleModel")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("vehicleModel")
+                        .HasAnnotation("Relational:JsonPropertyName", "vehicleModel");
 
-                    b.Property<string>("VehicleNo")
-                        .IsRequired()
+                    b.Property<int?>("VehicleModelYear")
+                        .HasColumnType("int")
+                        .HasColumnName("vehicleModelYear")
+                        .HasAnnotation("Relational:JsonPropertyName", "vehicleModelYear");
+
+                    b.Property<int?>("VehicleRegistrationYear")
+                        .HasColumnType("int")
+                        .HasColumnName("vehicleRegistrationYear")
+                        .HasAnnotation("Relational:JsonPropertyName", "vehicleRegistrationYear");
+
+                    b.Property<string>("VehicleType")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("vehicleType")
+                        .HasAnnotation("Relational:JsonPropertyName", "vehicleType");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerIdFk");
+
+                    b.HasIndex("VehicleId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Vehicles_VehicleId");
+
                     b.ToTable("Vehicles");
+                });
+
+            modelBuilder.Entity("PaymentApi.Models.Vehicle", b =>
+                {
+                    b.HasOne("PaymentApi.Models.Customer", "Customer")
+                        .WithMany("Vehicles")
+                        .HasForeignKey("CustomerIdFk")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("PaymentApi.Models.Customer", b =>
+                {
+                    b.Navigation("Vehicles");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { Protected } from "@/app/auth/Protected";
 
 const services = [
   "Scheduled maintenance",
@@ -39,7 +40,7 @@ const initialAppointment: Appointment = {
   notes: "",
 };
 
-export default function AppointmentPage() {
+function AppointmentContent() {
   const [appointment, setAppointment] = useState(initialAppointment);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<Appointment | null>(null);
@@ -61,13 +62,13 @@ export default function AppointmentPage() {
   const confirmationSummary = useMemo(() => {
     if (!confirmation) return null;
     return `${confirmation.service} for ${confirmation.vehicle} on ${new Date(
-      `${confirmation.date}T${confirmation.time}`
+      `${confirmation.date}T${confirmation.time}`,
     ).toLocaleString([], { dateStyle: "long", timeStyle: "short" })}`;
   }, [confirmation]);
 
   return (
     <section className="section">
-      <div className="container hero-content">
+      <div className="hero-content container">
         <div>
           <p className="eyebrow">Plan your visit</p>
           <h1>Book a NovaDrive appointment</h1>
@@ -117,7 +118,9 @@ export default function AppointmentPage() {
                 id="vehicle"
                 placeholder="Year • Make • Model"
                 value={appointment.vehicle}
-                onChange={(event) => handleChange("vehicle", event.target.value)}
+                onChange={(event) =>
+                  handleChange("vehicle", event.target.value)
+                }
                 required
               />
             </div>
@@ -127,7 +130,9 @@ export default function AppointmentPage() {
               <select
                 id="service"
                 value={appointment.service}
-                onChange={(event) => handleChange("service", event.target.value)}
+                onChange={(event) =>
+                  handleChange("service", event.target.value)
+                }
               >
                 {services.map((service) => (
                   <option key={service} value={service}>
@@ -164,7 +169,9 @@ export default function AppointmentPage() {
               <select
                 id="transport"
                 value={appointment.transport}
-                onChange={(event) => handleChange("transport", event.target.value)}
+                onChange={(event) =>
+                  handleChange("transport", event.target.value)
+                }
               >
                 {transportOptions.map((option) => (
                   <option key={option} value={option}>
@@ -187,7 +194,11 @@ export default function AppointmentPage() {
           </div>
 
           <div className="form-actions">
-            <button className="button primary" type="submit" disabled={isSubmitting}>
+            <button
+              className="button primary"
+              type="submit"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "Submitting..." : "Confirm appointment"}
             </button>
           </div>
@@ -201,5 +212,13 @@ export default function AppointmentPage() {
         </form>
       </div>
     </section>
+  );
+}
+
+export default function AppointmentPage() {
+  return (
+    <Protected redirectTo="/appointments">
+      <AppointmentContent />
+    </Protected>
   );
 }
