@@ -1,6 +1,5 @@
 .env
-venv/
-chroma_store/
+enterprise/
 
 # Python cache
 **/__pycache__/
@@ -10,3 +9,7 @@ chroma_store/
 # Pytest
 .cache/
 .pytest_cache/
+
+.dockerignore
+Dockerfile
+docker-compose.yml

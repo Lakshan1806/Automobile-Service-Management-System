@@ -1,6 +1,145 @@
+import crypto from "crypto";
 import Request from "../models/request.model.js";
 
+function generateReference() {
+  const suffix = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `RSA-${suffix}`;
+}
+
 const locationController = {
+  listRoadsideRequests: async (_req, res) => {
+    try {
+      const requests = await Request.find({
+        requestType: "roadside_assistance",
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const response = requests.map((request) => ({
+        id: request._id.toString(),
+        reference: request.reference,
+        status: request.status,
+        description: request.description,
+        customer: {
+          id: request.customerId,
+          name: request.customerName,
+          email: request.customerEmail,
+        },
+        vehicle: {
+          id: request.vehicle?.id ?? null,
+          brand: request.vehicle?.brand ?? null,
+          model: request.vehicle?.model ?? null,
+          numberPlate: request.vehicle?.numberPlate ?? null,
+        },
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
+      }));
+
+      return res.json(response);
+    } catch (error) {
+      console.error("Failed to list roadside assistance requests:", error);
+      return res.status(500).json({ message: "Unable to fetch requests" });
+    }
+  },
+
+  createRoadsideAssistanceRequest: async (req, res) => {
+    const { customer, vehicle, description } = req.body || {};
+
+    if (
+      !customer?.id ||
+      !customer?.name ||
+      !customer?.email ||
+      !vehicle?.id ||
+      !vehicle?.brand ||
+      !vehicle?.numberPlate ||
+      !description
+    ) {
+      return res.status(400).json({
+        message:
+          "customer (id, name, email), vehicle (id, brand, numberPlate), and description are required",
+      });
+    }
+
+    const payload = {
+      customerId: String(customer.id),
+      customerName: customer.name.trim(),
+      customerEmail: customer.email.trim().toLowerCase(),
+      vehicle: {
+        id: String(vehicle.id),
+        brand: vehicle.brand.trim(),
+        model: vehicle.model ? vehicle.model.trim() : null,
+        numberPlate: vehicle.numberPlate.trim().toUpperCase(),
+      },
+      description: description.trim(),
+    };
+
+    if (payload.description.length === 0) {
+      return res.status(400).json({ message: "description cannot be empty" });
+    }
+
+    try {
+      const roadsideRequest = await Request.create({
+        customerId: payload.customerId,
+        customerName: payload.customerName,
+        customerEmail: payload.customerEmail,
+        vehicle: payload.vehicle,
+        description: payload.description,
+        requestType: "roadside_assistance",
+        reference: generateReference(),
+      });
+
+      return res.status(201).json({
+        requestId: roadsideRequest._id.toString(),
+        reference: roadsideRequest.reference,
+        status: roadsideRequest.status,
+      });
+    } catch (error) {
+      console.error("Failed to create roadside assistance request:", error);
+      return res.status(500).json({ message: "Unable to create request" });
+    }
+  },
+
+  assignRoadsideTechnician: async (req, res) => {
+    const { requestId } = req.params;
+    const { technicianId } = req.body || {};
+
+    if (!requestId) {
+      return res.status(400).json({ message: "requestId parameter is required" });
+    }
+
+    if (typeof technicianId !== "string" || technicianId.trim().length === 0) {
+      return res
+        .status(400)
+        .json({ message: "technicianId must be a non-empty string" });
+    }
+
+    try {
+      const request = await Request.findOne({
+        _id: requestId,
+        requestType: "roadside_assistance",
+      });
+
+      if (!request) {
+        return res.status(404).json({ message: "Roadside request not found" });
+      }
+
+      request.technicianId = technicianId.trim();
+      if (request.status === "pending") {
+        request.status = "assigned";
+      }
+      await request.save();
+
+      return res.json({
+        requestId: request._id.toString(),
+        technicianId: request.technicianId,
+        status: request.status,
+      });
+    } catch (error) {
+      console.error("Failed to assign technician to roadside request:", error);
+      return res.status(500).json({ message: "Unable to assign technician" });
+    }
+  },
+
   updateLocation: async (req, res) => {
     const { requestId, technicianId, customerId, lat, lng } = req.body;
 

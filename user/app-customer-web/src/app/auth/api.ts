@@ -1,8 +1,18 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+const authApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_AUTHENTICATION_SERVICE_API_URL,
   withCredentials: true,
 });
 
-export { api };
+const userApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_USER_SERVICE_API_URL,
+  withCredentials: true,
+});
+
+const locationApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_LOCATION_SERVICE_API_URL,
+  withCredentials: true,
+}); 
+
+export { authApi, userApi, locationApi };

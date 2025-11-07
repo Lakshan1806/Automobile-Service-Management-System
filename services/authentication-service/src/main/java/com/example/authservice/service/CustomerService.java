@@ -1,9 +1,11 @@
 package com.example.authservice.service;
 
 import com.example.authservice.dto.AuthResponse;
+import com.example.authservice.dto.ChangePasswordRequest;
 import com.example.authservice.dto.CustomerResponse;
 import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.SignupRequest;
+import com.example.authservice.dto.UpdateCustomerRequest;
 import com.example.authservice.model.Customer;
 import com.example.authservice.repository.CustomerRepository;
 import com.example.authservice.security.JwtTokenService;
@@ -19,14 +21,17 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
+    private final UserProfileClient userProfileClient;
 
     public CustomerService(
             CustomerRepository customerRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenService jwtTokenService) {
+            JwtTokenService jwtTokenService,
+            UserProfileClient userProfileClient) {
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenService = jwtTokenService;
+        this.userProfileClient = userProfileClient;
     }
 
     public CustomerResponse register(SignupRequest request) {
@@ -36,6 +41,7 @@ public class CustomerService {
         String hashedPassword = passwordEncoder.encode(request.getPassword());
         Customer customer = new Customer(request.getName(), request.getEmail(), hashedPassword);
         Customer saved = customerRepository.save(customer);
+        userProfileClient.createCustomerProfile(saved.getId());
         return mapToResponse(saved);
     }
 
@@ -54,12 +60,53 @@ public class CustomerService {
                 List.of("CUSTOMER"));
     }
 
+    public CustomerResponse updateCustomerDetails(Long customerId, UpdateCustomerRequest request) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
+
+        boolean emailChanged = !customer.getEmail().equalsIgnoreCase(request.getEmail());
+        if (emailChanged) {
+            customerRepository.findByEmail(request.getEmail())
+                    .filter(existing -> !existing.getId().equals(customerId))
+                    .ifPresent(existing -> {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
+                    });
+        }
+
+        customer.setName(request.getName());
+        customer.setEmail(request.getEmail());
+
+        Customer updated = customerRepository.save(customer);
+        return mapToResponse(updated);
+    }
+
+    public void changePassword(Long customerId, ChangePasswordRequest request) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), customer.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Current password is invalid");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), customer.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be different");
+        }
+
+        customer.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        customerRepository.save(customer);
+    }
+
+    public CustomerResponse getCustomer(Long customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
+        return mapToResponse(customer);
+    }
+
     private CustomerResponse mapToResponse(Customer customer) {
         return new CustomerResponse(
                 customer.getId(),
                 customer.getName(),
                 customer.getEmail()
-            
         );
     }
 }

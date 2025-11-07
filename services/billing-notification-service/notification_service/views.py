@@ -191,8 +191,8 @@ class SendBillEmailView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        email = serializer.validated_data['email']
         bill_id = serializer.validated_data['bill_id']
+        email = serializer.validated_data.get('email')  # Optional
 
         try:
             try:
@@ -200,12 +200,19 @@ class SendBillEmailView(APIView):
             except Bill.DoesNotExist:
                 return Response({'error': 'Bill not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            success = EmailService.send_bill_email(email, bill)
+            # Use provided email or bill's customer email
+            recipient_email = email or bill.customer_email
+
+            logger.info(
+                f"[SEND-BILL] Sending bill {bill_id} to {recipient_email}")
+            success = EmailService.send_bill_email(recipient_email, bill)
 
             if success:
                 return Response({
                     'success': True,
-                    'message': 'Bill sent successfully to email'
+                    'message': 'Bill sent successfully to email',
+                    'bill_id': str(bill.bill_id),
+                    'email': recipient_email
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({

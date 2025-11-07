@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'chatbot',
     'admin_services',
+    'core_auth',
 ]
 
 MIDDLEWARE = [
@@ -117,7 +118,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'admin_services.authentication.JwtEmployeeAuthentication',
+        'core_auth.authentication.JwtAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
