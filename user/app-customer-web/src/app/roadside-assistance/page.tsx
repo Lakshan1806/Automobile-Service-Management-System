@@ -1,29 +1,69 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/app/auth/AuthContext";
+import {
+  readCachedVehicles,
+  type CustomerVehicle,
+} from "@/app/auth/auth";
+import { locationApi } from "@/app/auth/api";
 
 type RequestForm = {
-  name: string;
-  phone: string;
-  vehicle: string;
-  issue: string;
-  location: string;
-  needTow: boolean;
+  vehicleId: string;
+  description: string;
 };
 
 const initialForm: RequestForm = {
-  name: "",
-  phone: "",
-  vehicle: "",
-  issue: "",
-  location: "",
-  needTow: false,
+  vehicleId: "",
+  description: "",
+};
+
+type RoadsidePayload = {
+  customer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  vehicle: {
+    id: string;
+    brand: string;
+    model: string;
+    numberPlate: string;
+  };
+  description: string;
+};
+
+type RoadsideSubmitResponse = {
+  requestId: string;
+  reference: string;
+  status: string;
 };
 
 export default function RoadsideAssistancePage() {
-  const [form, setForm] = useState(initialForm);
-  const [reference, setReference] = useState<string | null>(null);
+  const { customer } = useAuth();
+  const [form, setForm] = useState<RequestForm>(initialForm);
+  const [vehicles, setVehicles] = useState<CustomerVehicle[]>([]);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setVehicles(readCachedVehicles());
+  }, []);
+
+  useEffect(() => {
+    setForm((current) => {
+      if (current.vehicleId || vehicles.length === 0) {
+        return current;
+      }
+      return { ...current, vehicleId: vehicles[0].vehicleId };
+    });
+  }, [vehicles]);
+
+  const selectedVehicle = useMemo(
+    () => vehicles.find((vehicle) => vehicle.vehicleId === form.vehicleId) ?? null,
+    [form.vehicleId, vehicles],
+  );
 
   function handleChange<K extends keyof RequestForm>(key: K, value: RequestForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -31,13 +71,77 @@ export default function RoadsideAssistancePage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
+    if (!customer || !selectedVehicle) {
+      return;
+    }
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const code = `NRD-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-    setReference(code);
-    setIsSubmitting(false);
-    setForm(initialForm);
+    setIsSubmitting(true);
+    setSuccessMessage(null);
+    setError(null);
+
+    const payload: RoadsidePayload = {
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+      },
+      vehicle: {
+        id: selectedVehicle.vehicleId,
+        brand: selectedVehicle.vehicleBrand,
+        model: selectedVehicle.vehicleModel,
+        numberPlate: selectedVehicle.noPlate,
+      },
+      description: form.description.trim(),
+    };
+
+    if (!payload.description) {
+      setError("Tell us what happened so we can dispatch the right help.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const { data } = await locationApi.post<RoadsideSubmitResponse>(
+        "/api/roadside/requests",
+        payload,
+      );
+      setSuccessMessage(
+        `Your request has been sent. Your request id is ${data.reference}. A technician will reach out to you shortly.`,
+      );
+      setForm((current) => ({ ...current, description: "" }));
+    } catch (submissionError) {
+      console.error(
+        "Failed to submit roadside assistance request:",
+        submissionError,
+      );
+      let message = "We could not submit your request. Please try again.";
+      if (
+        submissionError &&
+        typeof submissionError === "object" &&
+        "response" in submissionError
+      ) {
+        const response = submissionError.response as {
+          data?: unknown;
+        };
+        const data = response?.data;
+        if (
+          data &&
+          typeof data === "object" &&
+          "message" in data &&
+          typeof (data as { message?: unknown }).message === "string"
+        ) {
+          message = (data as { message: string }).message;
+        }
+      } else if (
+        submissionError instanceof Error &&
+        submissionError.message
+      ) {
+        message = submissionError.message;
+      }
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -65,76 +169,70 @@ export default function RoadsideAssistancePage() {
           <h2>Request help now</h2>
           <div className="form-grid">
             <div className="form-field">
-              <label htmlFor="name">Your name</label>
-              <input
-                id="name"
-                value={form.name}
-                onChange={(event) => handleChange("name", event.target.value)}
-                required
-              />
-            </div>
-            <div className="form-field">
-              <label htmlFor="phone">Mobile number</label>
-              <input
-                id="phone"
-                value={form.phone}
-                onChange={(event) => handleChange("phone", event.target.value.replace(/[^0-9+\-\s]/g, ""))}
-                placeholder="+1 313 555 0192"
-                required
-              />
-            </div>
-            <div className="form-field">
               <label htmlFor="vehicle">Vehicle</label>
-              <input
+              <select
                 id="vehicle"
-                value={form.vehicle}
-                onChange={(event) => handleChange("vehicle", event.target.value)}
-                placeholder="NovaDrive Pulse EV"
+                value={form.vehicleId}
+                onChange={(event) => handleChange("vehicleId", event.target.value)}
                 required
-              />
+                disabled={!customer || vehicles.length === 0}
+              >
+                <option value="" disabled>
+                  Select your vehicle
+                </option>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
+                    {vehicle.vehicleBrand} {vehicle.vehicleModel} • {vehicle.noPlate}
+                  </option>
+                ))}
+              </select>
+              {!customer && (
+                <p className="muted">Sign in to choose from your NovaDrive garage.</p>
+              )}
+              {customer && vehicles.length === 0 && (
+                <p className="muted">Add a vehicle in your account to request roadside help.</p>
+              )}
             </div>
+            {selectedVehicle && (
+              <div className="form-field">
+                <p className="muted">
+                  Selected vehicle:&nbsp;
+                  <strong>
+                    {selectedVehicle.vehicleBrand} {selectedVehicle.vehicleModel} • {selectedVehicle.noPlate}
+                  </strong>
+                </p>
+              </div>
+            )}
             <div className="form-field">
-              <label htmlFor="location">Current location</label>
+              <label htmlFor="description">What happened?</label>
               <textarea
-                id="location"
-                rows={3}
-                value={form.location}
-                onChange={(event) => handleChange("location", event.target.value)}
-                placeholder="Address, intersection, or GPS pin"
+                id="description"
+                rows={4}
+                value={form.description}
+                onChange={(event) => handleChange("description", event.target.value)}
+                placeholder="Flat tire on I-94 near exit 210..."
                 required
+                disabled={!customer || vehicles.length === 0}
               />
-            </div>
-            <div className="form-field">
-              <label htmlFor="issue">What happened?</label>
-              <textarea
-                id="issue"
-                rows={3}
-                value={form.issue}
-                onChange={(event) => handleChange("issue", event.target.value)}
-                placeholder="Engine trouble, flat tire, locked out, etc."
-                required
-              />
-            </div>
-            <div className="form-field checkbox-field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={form.needTow}
-                  onChange={(event) => handleChange("needTow", event.target.checked)}
-                />
-                My vehicle needs towing
-              </label>
             </div>
           </div>
           <div className="form-actions">
-            <button className="button primary" type="submit" disabled={isSubmitting}>
+            <button
+              className="button primary"
+              type="submit"
+              disabled={!customer || vehicles.length === 0 || isSubmitting}
+            >
               {isSubmitting ? "Submitting request..." : "Send request"}
             </button>
           </div>
-          {reference && (
+          {error && (
+            <div className="feedback error" role="alert">
+              {error}
+            </div>
+          )}
+          {successMessage && (
             <div className="feedback" role="status" aria-live="polite">
-              We have your request. Your dispatch reference number is <strong>{reference}</strong>.
-              A specialist will text updates shortly.
+              {successMessage}
             </div>
           )}
         </form>
@@ -142,3 +240,4 @@ export default function RoadsideAssistancePage() {
     </section>
   );
 }
+

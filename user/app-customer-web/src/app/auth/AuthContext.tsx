@@ -8,8 +8,13 @@ import {
   useMemo,
   useState,
 } from "react";
-import { api } from "@/app/auth/api";
-import type { Customer } from "@/app/auth/auth";
+import { authApi } from "@/app/auth/api";
+import {
+  cacheVehicles,
+  clearCachedVehicles,
+  fetchCustomerVehicles,
+  type Customer,
+} from "@/app/auth/auth";
 
 type AuthContextValue = {
   customer: Customer | null;
@@ -68,13 +73,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const { data } = await api.get<{ customer: Customer }>(
+      const { data } = await authApi.get<{ customer: Customer }>(
         "/api/customer/me",
       );
       persistProfile(data.customer);
+      try {
+        const vehicles = await fetchCustomerVehicles(data.customer.id);
+        cacheVehicles(vehicles);
+      } catch (error) {
+        console.info("Customer vehicle preload failed.", error);
+        clearCachedVehicles();
+      }
     } catch (error) {
       console.info("Customer session refresh failed.", error);
       persistProfile(null);
+      clearCachedVehicles();
       throw error;
     }
   }, [persistProfile]);
@@ -111,11 +124,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await api.post("/api/customers/logout");
+      await authApi.post("/api/customers/logout");
     } catch (error) {
       console.info("Customer logout request failed.", error);
     } finally {
       persistProfile(null);
+      clearCachedVehicles();
       setLoading(false);
     }
   }, [persistProfile]);
