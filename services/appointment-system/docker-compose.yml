@@ -1,7 +1,12 @@
 services:
   # 1. Your Spring Boot Service
   appointment-service:
-    build: ./appointment-services  # Tells compose to build from the Dockerfile here
+    build:
+      # --- THIS IS THE FIX ---
+      # 1. Change the build context to the root of the monorepo
+      context: ../../ 
+      # 2. Point to the Dockerfile from that new context
+      dockerfile: ./services/appointment-system/appointment-services/Dockerfile
     ports:
       - "8080:8080" # Maps <your-computer-port>:<container-port>
     environment:
