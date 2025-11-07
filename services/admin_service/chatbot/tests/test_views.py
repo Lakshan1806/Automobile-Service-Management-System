@@ -15,7 +15,7 @@ class AskQuestionViewTest(TestCase):
         mock_auth.return_value = (principal, "mock_token")
 
     @patch("chatbot.views.answer_question")
-    @patch("chatbot.views.JwtCustomerAuthentication.authenticate")
+    @patch("core_auth.authentication.JwtAuthentication.authenticate")
     def test_no_question_provided(self, mock_auth, mock_answer):
         self._mock_auth(mock_auth)
         response = self.client.get("/chat/ask/")
@@ -23,7 +23,7 @@ class AskQuestionViewTest(TestCase):
         self.assertIn("error", response.json())
 
     @patch("chatbot.views.answer_question")
-    @patch("chatbot.views.JwtCustomerAuthentication.authenticate")
+    @patch("core_auth.authentication.JwtAuthentication.authenticate")
     def test_question_returns_answer(self, mock_auth, mock_answer):
         self._mock_auth(mock_auth)
         mock_answer.return_value = "Mock answer"

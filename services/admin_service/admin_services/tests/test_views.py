@@ -37,7 +37,7 @@ class MockedAPITests(APITestCase):
         # Patch HasRealmAndRole.has_permission to always allow
         # -------------------------
         self.patcher_hasrealm = patch(
-            "admin_services.views.HasRealmAndRole.has_permission", return_value=True
+            "core_auth.permissions.HasRealmAndRole.has_permission", return_value=True
         )
         self.mock_hasrealm = self.patcher_hasrealm.start()
 
