@@ -29,7 +29,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/.well-known/jwks.json").permitAll()
-                        .requestMatchers("/api/customers/signup", "/api/customers/login", "/api/customers/me").permitAll()
+                        .requestMatchers(
+                                "/api/customers/signup",
+                                "/api/customers/login",
+                                "/api/customers/me",
+                                "/api/customers/me/password").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/customers/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/employees/invite").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/employees/activate", "/api/employees/login").permitAll()
                         .anyRequest().authenticated())

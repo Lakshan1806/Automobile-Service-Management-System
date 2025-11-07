@@ -2,9 +2,11 @@ package com.example.authservice.controller;
 
 import com.example.authservice.config.TokenProperties;
 import com.example.authservice.dto.AuthResponse;
+import com.example.authservice.dto.ChangePasswordRequest;
 import com.example.authservice.dto.CustomerResponse;
 import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.SignupRequest;
+import com.example.authservice.dto.UpdateCustomerRequest;
 import com.example.authservice.security.JwtTokenService;
 import com.example.authservice.service.CustomerService;
 import jakarta.servlet.http.Cookie;
@@ -19,11 +21,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -103,6 +108,26 @@ public class CustomerController {
         return ResponseEntity.ok(Map.of("customer", customer));
     }
 
+    @GetMapping("/{id}")
+    public CustomerResponse getCustomer(@PathVariable Long id) {
+        return customerService.getCustomer(id);
+    }
+
+    @PutMapping("/me")
+    public CustomerResponse updateMe(@Valid @RequestBody UpdateCustomerRequest request, HttpServletRequest httpRequest) {
+        Long customerId = requireCustomerId(httpRequest);
+        return customerService.updateCustomerDetails(customerId, request);
+    }
+
+    @PutMapping("/me/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            HttpServletRequest httpRequest) {
+        Long customerId = requireCustomerId(httpRequest);
+        customerService.changePassword(customerId, request);
+    }
+
     private String resolveToken(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -120,6 +145,30 @@ public class CustomerController {
             }
         }
         return null;
+    }
+
+    private Long requireCustomerId(HttpServletRequest request) {
+        String token = resolveToken(request);
+        if (token == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing authentication token");
+        }
+
+        Jwt jwt;
+        try {
+            jwt = jwtTokenService.decodeToken(token);
+        } catch (IllegalArgumentException | JwtException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authentication token");
+        }
+
+        if (!isCustomerToken(jwt)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Token does not belong to a customer");
+        }
+
+        try {
+            return Long.parseLong(jwt.getSubject());
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token subject is invalid");
+        }
     }
 
     private boolean isCustomerToken(Jwt jwt) {
