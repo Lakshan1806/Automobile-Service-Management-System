@@ -99,6 +99,47 @@ const locationController = {
     }
   },
 
+  assignRoadsideTechnician: async (req, res) => {
+    const { requestId } = req.params;
+    const { technicianId } = req.body || {};
+
+    if (!requestId) {
+      return res.status(400).json({ message: "requestId parameter is required" });
+    }
+
+    if (typeof technicianId !== "string" || technicianId.trim().length === 0) {
+      return res
+        .status(400)
+        .json({ message: "technicianId must be a non-empty string" });
+    }
+
+    try {
+      const request = await Request.findOne({
+        _id: requestId,
+        requestType: "roadside_assistance",
+      });
+
+      if (!request) {
+        return res.status(404).json({ message: "Roadside request not found" });
+      }
+
+      request.technicianId = technicianId.trim();
+      if (request.status === "pending") {
+        request.status = "assigned";
+      }
+      await request.save();
+
+      return res.json({
+        requestId: request._id.toString(),
+        technicianId: request.technicianId,
+        status: request.status,
+      });
+    } catch (error) {
+      console.error("Failed to assign technician to roadside request:", error);
+      return res.status(500).json({ message: "Unable to assign technician" });
+    }
+  },
+
   updateLocation: async (req, res) => {
     const { requestId, technicianId, customerId, lat, lng } = req.body;
 

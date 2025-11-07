@@ -14,6 +14,11 @@ locationRoutes.get(
   authenticateToken,
   locationController.listRoadsideRequests,
 );
+locationRoutes.patch(
+  "/roadside/requests/:requestId/assign",
+  authenticateToken,
+  locationController.assignRoadsideTechnician,
+);
 locationRoutes.patch("/location", locationController.updateLocation);
 locationRoutes.post("/test", locationController.testLocation);
 locationRoutes.get("/technician_location", locationController.getTechnicianLocation);
