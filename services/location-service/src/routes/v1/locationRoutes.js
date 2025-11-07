@@ -5,6 +5,15 @@ import authenticateToken from "../../middlewares/adminTokenAuthenticator.js";
 
 const locationRoutes = express.Router();
 
+locationRoutes.post(
+  "/roadside/requests",
+  locationController.createRoadsideAssistanceRequest,
+);
+locationRoutes.get(
+  "/roadside/requests",
+  authenticateToken,
+  locationController.listRoadsideRequests,
+);
 locationRoutes.patch("/location", locationController.updateLocation);
 locationRoutes.post("/test", locationController.testLocation);
 locationRoutes.get("/technician_location", locationController.getTechnicianLocation);
