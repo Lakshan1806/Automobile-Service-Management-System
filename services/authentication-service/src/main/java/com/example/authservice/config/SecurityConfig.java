@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/customers/signup",
                                 "/api/customers/login",
+                                "/api/customers/logout",
                                 "/api/customers/me",
                                 "/api/customers/me/password").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/customers/*").permitAll()

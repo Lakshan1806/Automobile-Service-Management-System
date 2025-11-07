@@ -76,6 +76,28 @@ public class CustomerController {
                 .body(auth);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie
+                .from(tokenProperties.getCookieName(), "")
+                .httpOnly(true)
+                .secure(tokenProperties.isCookieSecure())
+                .path(tokenProperties.getCookiePath())
+                .maxAge(0)
+                .sameSite(tokenProperties.getCookieSameSite());
+
+        String domain = tokenProperties.getCookieDomain();
+        if (domain != null && !domain.isBlank()) {
+            builder = builder.domain(domain);
+        }
+
+        ResponseCookie cookie = builder.build();
+
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<Map<String, CustomerResponse>> me(HttpServletRequest request) {
         String token = resolveToken(request);
