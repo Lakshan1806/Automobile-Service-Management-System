@@ -45,7 +45,7 @@ def test_answer_question(mock_client, mock_get_chunks):
     mock_response.text = "This is a mock answer."
     mock_client.models.generate_content.return_value = mock_response
 
-    answer = answer_question("Hello")
+    answer = answer_question("Hello","u1")
     assert answer == "This is a mock answer."
 
     mock_get_chunks.assert_called_once()

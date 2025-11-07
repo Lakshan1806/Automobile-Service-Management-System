@@ -5,7 +5,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = "__all__"
-        read_only_fields = ("invite_token", "is_activated")
+        read_only_fields = ("invite_token",)
 
 class BranchSerializer(serializers.ModelSerializer):
     manager_name = serializers.CharField(source='manager.name', read_only=True)

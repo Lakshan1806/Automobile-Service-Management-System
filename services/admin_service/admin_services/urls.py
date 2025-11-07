@@ -3,8 +3,8 @@ from .views import (
     EmployeeCreateView,
     EmployeeUpdateView,
     EmployeeDeleteView,
-    get_employee_role,
     EmployeeListView,
+    EmployeeRoleView,
 )
 from .views import (
     BranchCreateView,
@@ -32,7 +32,7 @@ urlpatterns = [
     path("employees/all/", EmployeeListView.as_view(), name="list_employees"),
     path("employees/<int:employee_id>/", EmployeeUpdateView.as_view(), name="update_employee"),
     path("employees/<int:employee_id>/delete/", EmployeeDeleteView.as_view(), name="delete_employee"),
-    path("employees/role/", get_employee_role, name="get_employee_role"),
+    path("employees/role/", EmployeeRoleView.as_view(), name="get_employee_role"),
 
     path('branches/create/', BranchCreateView.as_view(), name='branch_create'),
     path('branches/', BranchListView.as_view(), name='branch_list'),

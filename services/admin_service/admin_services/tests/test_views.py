@@ -1,65 +1,54 @@
-# admin_services/tests/test_views_mocked.py
 from unittest.mock import patch, MagicMock
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from admin_services.models import Employee, Branch, Service, Product
 
-# Patch targets (update import paths if your actual classes live elsewhere)
-HAS_REALM_ROLE_PATH = "admin_services.views.HasRealmAndRole.has_permission"
-ADMIN_MIXIN_PATH = "admin_services.views.AdminProtectedView.has_permission"
-MANAGER_MIXIN_PATH = "admin_services.views.ManagerProtectedView.has_permission"
-ADMIN_OR_MANAGER_MIXIN_PATH = "admin_services.views.AdminOrManagerProtectedView.has_permission"
-
 class MockedAPITests(APITestCase):
     def setUp(self):
         self.client = APIClient()
 
-        # Create sample data used across tests
+        # -------------------------
+        # Sample data
+        # -------------------------
         self.employee = Employee.objects.create(
             email="test@example.com",
             name="John Doe",
             role="Manager"
         )
-
         self.manager = Employee.objects.create(
             email="manager@example.com",
             name="Alice Manager",
             role="Manager"
         )
-
         self.branch = Branch.objects.create(
             name="Main Branch",
             location="City Center",
             manager=self.manager
         )
-
         self.service = Service.objects.create(
             name="Oil Change", description="Change engine oil", price=500
         )
-
         self.product = Product.objects.create(
             name="Brake Pad", description="Front brake pad", price=1500, stock=10
         )
 
-        # Start permission patchers so views won't block calls
-        self.patcher_hasrealm = patch(HAS_REALM_ROLE_PATH, return_value=True)
-        self.patcher_admin = patch(ADMIN_MIXIN_PATH, return_value=True)
-        self.patcher_manager = patch(MANAGER_MIXIN_PATH, return_value=True)
-        self.patcher_admin_or_mgr = patch(ADMIN_OR_MANAGER_MIXIN_PATH, return_value=True)
-
+        # -------------------------
+        # Patch HasRealmAndRole.has_permission to always allow
+        # -------------------------
+        self.patcher_hasrealm = patch(
+            "admin_services.views.HasRealmAndRole.has_permission", return_value=True
+        )
         self.mock_hasrealm = self.patcher_hasrealm.start()
-        self.mock_admin = self.patcher_admin.start()
-        self.mock_manager = self.patcher_manager.start()
-        self.mock_admin_or_mgr = self.patcher_admin_or_mgr.start()
 
-        # Patch send_mail and requests.post for create flows (start here or patch per-test)
+        # -------------------------
+        # Patch send_mail and requests.post for employee creation
+        # -------------------------
         self.patcher_send_mail = patch("admin_services.views.send_mail", autospec=True)
         self.mock_send_mail = self.patcher_send_mail.start()
 
         self.patcher_requests_post = patch("admin_services.views.requests.post", autospec=True)
         self.mock_requests_post = self.patcher_requests_post.start()
-        # default good response
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.text = "ok"
@@ -84,19 +73,35 @@ class MockedAPITests(APITestCase):
         assert response.data["role"] == self.employee.role
 
     def test_create_employee_calls_auth_and_sends_email(self):
-        url = reverse("employee_create")
+        url = reverse("create_employee")
         payload = {
             "email": "newuser@example.com",
             "name": "New User",
-            "role": "Employee"
+            "role": "Technician"
         }
         response = self.client.post(url, payload, format="json")
-        # Created
         assert response.status_code in (status.HTTP_201_CREATED, status.HTTP_200_OK)
-        # requests.post to auth service called
         assert self.mock_requests_post.called
-        # send_mail called
         assert self.mock_send_mail.called
+
+    def test_update_employee(self):
+        url = reverse("update_employee", args=[self.employee.employee_id])
+        payload = {
+        "email": self.employee.email,
+        "name": "Updated Name",
+        "role": "Admin" 
+        }
+        response = self.client.put(url, payload, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        self.employee.refresh_from_db()
+        assert self.employee.name == "Updated Name"
+        assert self.employee.role == "Admin"
+
+    def test_delete_employee(self):
+        url = reverse("delete_employee", args=[self.employee.employee_id])
+        response = self.client.delete(url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not Employee.objects.filter(employee_id=self.employee.employee_id).exists()
 
     # -------------------------
     # Branch tests

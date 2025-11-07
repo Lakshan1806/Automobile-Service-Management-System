@@ -118,7 +118,7 @@ builder.add_edge(START, "chatbot")
 graph = builder.compile(checkpointer=checkpointer)
 
 # Chat interface with session memory
-def answer_question(query, user_id="u1"):
+def answer_question(query, user_id):
     result = graph.invoke(
         {"messages": [{"role": "user", "content": query}]},
         {"configurable": {"thread_id": user_id}}
