@@ -1,4 +1,5 @@
 # main.py
+
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, validator, Field
 from typing import Optional, List, Dict, Any
@@ -12,8 +13,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import settings
 from training import EnhancedVehicleRepairModel, train_enhanced_model
+
+# --- Kafka Imports ---
 from aiokafka import AIOKafkaProducer
 import json
+# ---
 
 app = FastAPI(
     title="Enhanced Vehicle Scheduling Prediction API",
@@ -24,6 +28,11 @@ app = FastAPI(
 # Global model handler
 model_handler = EnhancedVehicleRepairModel()
 
+
+# ---
+# --- KAFKA PRODUCER LOGIC (Resilient)
+# ---
+
 # Global producer
 kafka_producer = None
 
@@ -33,11 +42,18 @@ async def send_prediction_event(event: "PredictionEvent"):
     This is a true 'fire-and-forget' operation and will not block.
     """
     global kafka_producer
-    if kafka_producer is None or not kafka_producer.started:
-        print("ERROR: Kafka producer is not running or connected. Skipping event.")
-        return 
+    
+    # --- THIS IS THE FIX ---
+    # We only check if the producer object was successfully created.
+    # Our startup logic sets it to None if it fails to connect.
+    if kafka_producer is None:
+        print("ERROR: Kafka producer is not running. Skipping event.")
+        return  # Do not hang, just return
+    # --- END OF FIX ---
         
     try:
+        # Use send() instead of send_and_wait()
+        # This will not block the API request.
         await kafka_producer.send(
             settings.PREDICTION_EVENTS_TOPIC,
             key=event.vehicleType.encode('utf-8'),
@@ -45,7 +61,12 @@ async def send_prediction_event(event: "PredictionEvent"):
         )
         print(f"Sent audit event: {event.eventType}")
     except Exception as e:
+        # We catch the error so the API request does not fail
         print(f"CRITICAL: Could not send prediction event to Kafka: {e}")
+
+# ---
+# --- END OF KAFKA LOGIC
+# ---
 
 
 # --- Pydantic Models ---
@@ -116,7 +137,7 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
     # --- Calculate real vehicle age ---
     current_year = datetime.now().year
     vehicle_age = current_year - request.vehicleModelYear
-    vehicle_age = max(0, min(30, vehicle_age))
+    vehicle_age = max(0, min(30, vehicle_age)) # Clip to reasonable values
     # ---
     
     # Create base features
@@ -126,7 +147,7 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
         'repairType': repair_type,
         'millage': request.millage,
         'days_since_last_service': max(0, days_since_service),
-        'vehicle_age': vehicle_age,
+        'vehicle_age': vehicle_age,  # Use calculated age
         'season': get_current_season(),
         'high_millage': int(request.millage > settings.HIGH_MILLAGE_THRESHOLD),
         'is_premium_brand': int(vehicle_brand in ['mercedes', 'bmw', 'audi', 'lexus', 'volvo']),
@@ -146,7 +167,7 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
             if 'cat' in model_handler.preprocessor.named_transformers_:
                 all_feature_names.extend(model_handler.preprocessor.named_transformers_['cat'].get_feature_names_out())
         except Exception:
-             pass 
+             pass # Will just use the feature dict keys
         
         # We only need the *original* feature names, not the one-hot encoded ones
         original_features_needed = set(settings.MODEL_FEATURES)
@@ -303,6 +324,11 @@ async def get_current_configuration():
         model_features=settings.MODEL_FEATURES
     )
 
+
+# ---
+# --- MODIFIED Startup/Shutdown Events
+# ---
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize application."""
@@ -338,7 +364,7 @@ async def startup_event():
                 await asyncio.sleep(5) # Wait 5 seconds
             else:
                 print("FATAL: Kafka producer could not connect. Audit events will not be sent.")
-                kafka_producer = None 
+                kafka_producer = None # Ensure it's None so send_prediction_event will skip
                 
 
 @app.on_event("shutdown")
@@ -348,6 +374,11 @@ async def shutdown_event():
     if kafka_producer:
         await kafka_producer.stop()
         print("Kafka producer stopped.")
+
+# ---
+# --- END OF MODIFIED Startup/Shutdown
+# ---
+
 
 # --- API Endpoints ---
 
@@ -520,6 +551,7 @@ async def suggest_enhanced_start_date(request: EnhancedRepairRequest):
                 errorMessage=str(e)
             )
         )
+        # Re-raise the exception so the user gets the error
         raise e
 
 @app.post("/training/trigger")
@@ -532,7 +564,7 @@ async def trigger_training(background_tasks: BackgroundTasks):
 async def get_model_info():
     """Get information about the current model."""
     if model_handler.model is None:
-        raise HTTPException(status_code=404, detail="No model loaded")
+        raise HTTPException(status_code=4.04, detail="No model loaded")
     
     return {
         "model_type": type(model_handler.model).__name__,

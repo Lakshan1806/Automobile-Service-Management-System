@@ -1,20 +1,30 @@
 package com.nivethan.appointmentservices.Service;
 
-import com.nivethan.appointmentservices.Dto.*;
-import com.nivethan.appointmentservices.Model.AppointmentStatus;
-import com.nivethan.appointmentservices.Model.RepairAppointmentRequest;
-import com.nivethan.appointmentservices.Repository.RepairAppointmentRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
+
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+
+import com.nivethan.appointmentservices.Dto.AppointmentRequestDto;
+import com.nivethan.appointmentservices.Dto.AppointmentResponseDto;
+import com.nivethan.appointmentservices.Dto.FastApiRequestDto;
+import com.nivethan.appointmentservices.Dto.FastApiResponseDto;
+import com.nivethan.appointmentservices.Dto.VehicleDataDto;
+import com.nivethan.appointmentservices.Dto.VehicleSummaryDto;
+import com.nivethan.appointmentservices.Model.AppointmentStatus;
+import com.nivethan.appointmentservices.Model.RepairAppointmentRequest;
+import com.nivethan.appointmentservices.Repository.RepairAppointmentRepository;
+import com.nivethan.audit.AuditProducerService;
+
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
@@ -26,8 +36,12 @@ public class AppointmentService {
     private final VehicleServiceClient vehicleServiceClient;
     private final FastApiServiceClient fastApiServiceClient;
 
-    private final KafkaAuditProducer kafkaAuditProducer;
-    // ---
+    // --- IT WORKS! ---
+    // Spring Boot automatically finds and injects this
+    // bean from your new "template" JAR
+    private final AuditProducerService auditProducer;
+
+    // ...
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
     
@@ -38,6 +52,7 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponseDto createAppointment(AppointmentRequestDto requestDto, String loggedInCustomerId) {
+        String traceId = UUID.randomUUID().toString(); // Create a trace ID
         try {
             log.info("Creating appointment for vehicle ID: {}", requestDto.getVehicleId());
 
@@ -85,30 +100,34 @@ public class AppointmentService {
             log.info("Successfully created appointment with ID: {}", savedAppointment.getId());
 
 
-            // --- NEW KAFKA LOGIC (SUCCESS) ---
-            kafkaAuditProducer.sendAppointmentEvent(
-                    AppointmentEvent.builder()
-                            .eventType("APPOINTMENT_CREATED")
-                            .appointmentId(savedAppointment.getId())
-                            .vehicleId(savedAppointment.getVehicleId())
-                            .repairType(savedAppointment.getRepairType())
-                            .status(savedAppointment.getStatus().name())
-                            .build()
+            // --- NEW KAFKA LOGIC (using the template) ---
+            auditProducer.sendSuccessEvent(
+                    "APPOINTMENT_CREATED",
+                    traceId,
+                    Map.of(
+                            "appointmentId", savedAppointment.getId(),
+                            "vehicleId", savedAppointment.getVehicleId(),
+                            "repairType", savedAppointment.getRepairType(),
+                            "status", savedAppointment.getStatus().name()
+                    )
             );
-            // --- END OF NEW LOGIC ---
+            // --- END ---
             return convertToResponseDto(savedAppointment);
 
         } catch (Exception e) {
             log.error("Error creating appointment for vehicle ID: {}", requestDto.getVehicleId(), e);
-            // --- NEW KAFKA LOGIC (FAILURE) ---
-            kafkaAuditProducer.sendAppointmentEvent(
-                    AppointmentEvent.builder()
-                            .eventType("APPOINTMENT_FAILED")
-                            .vehicleId(requestDto.getVehicleId())
-                            .repairType(requestDto.getRepairType())
-                            .errorMessage(e.getMessage().substring(0, Math.min(e.getMessage().length(), 255)))
-                            .build()
+            
+            // --- NEW KAFKA LOGIC (using the template) ---
+            auditProducer.sendFailureEvent(
+                    "APPOINTMENT_FAILED",
+                    traceId,
+                    Map.of(
+                            "vehicleId", requestDto.getVehicleId(),
+                            "repairType", requestDto.getRepairType()
+                    ),
+                    e.getMessage().substring(0, Math.min(e.getMessage().length(), 255))
             );
+            // --- END ---
             if (e instanceof AccessDeniedException) { throw (AccessDeniedException) e; } // Re-throw
             throw new RuntimeException("Failed to create appointment: " + e.getMessage());
         }
