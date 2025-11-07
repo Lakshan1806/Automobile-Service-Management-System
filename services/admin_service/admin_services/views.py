@@ -3,14 +3,14 @@ import requests
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework import generics, filters
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import APIException
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Employee, Branch, Service, Product
 from .serializers import EmployeeSerializer, BranchSerializer, ServiceSerializer, ProductSerializer
-from .permissions import HasRealmAndRole
-from .mixins import AdminProtectedView,ManagerProtectedView,AdminOrManagerProtectedView
+from core_auth.mixins import AdminProtectedView,ManagerProtectedView,AdminOrManagerProtectedView
 
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class EmployeeListView(AdminOrManagerProtectedView, generics.ListAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ["role", "is_activated"]
+    filterset_fields = ["role"]
     search_fields = ["name", "email"]
 
 # UPDATE EMPLOYEE
@@ -88,22 +88,20 @@ class EmployeeDeleteView(AdminProtectedView, generics.DestroyAPIView):
     lookup_field = "employee_id"
 
 # GET ROLE BY EMAIL
-@api_view(["GET"])
-@permission_classes([HasRealmAndRole])
-def get_employee_role(request):
-    email = request.GET.get("email")
-    if not email:
-        return Response({"error": "Email required"}, status=400)
-    try:
-        emp = Employee.objects.get(email=email)
-        return Response({
-            "email": emp.email,
-            "role": emp.role,
-        })
-    except Employee.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
-    
-get_employee_role.required_roles = ("ADMIN",)
+class EmployeeRoleView(AdminProtectedView, APIView):
+    def get(self, request):
+        email = request.GET.get("email")
+        if not email:
+            return Response({"error": "Email required"}, status=400)
+
+        try:
+            emp = Employee.objects.get(email=email)
+            return Response({
+                "email": emp.email,
+                "role": emp.role,
+            })
+        except Employee.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
 
 # CREATE BRANCH
 class BranchCreateView(AdminProtectedView, generics.CreateAPIView):
