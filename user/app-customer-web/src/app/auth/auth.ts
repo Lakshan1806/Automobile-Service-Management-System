@@ -15,14 +15,14 @@ export type SigninResponse = Customer;
 export type SignupResponse = { message: string; name: string; email: string };
 
 export async function signin(payload: SigninPayload): Promise<SigninResponse> {
-  await api.post("/api/login", payload);
+  await api.post("/api/customers/login", payload);
   const { data } = await api.get<{ customer: Customer }>("/api/customers/me");
   return data.customer;
 }
 
 export async function signup(payload: SignupPayload): Promise<SignupResponse> {
   const { data } = await api.post<SignupResponse>(
-    "/api/signup",
+    "/api/customers/signup",
     payload,
   );
   return data;

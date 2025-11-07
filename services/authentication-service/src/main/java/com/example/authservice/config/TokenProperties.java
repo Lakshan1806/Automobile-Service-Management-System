@@ -31,6 +31,13 @@ public class TokenProperties {
      */
     private int maxPublishedKeys = 2;
 
+    // HttpOnly cookie settings for customer JWT
+    private String cookieName = "customer_access_token";
+    private String cookiePath = "/";
+    private String cookieDomain; // optional; omit for host-only (recommended for localhost)
+    private String cookieSameSite = "Lax"; // Lax | Strict | None
+    private boolean cookieSecure = false; // set true in production (required for SameSite=None)
+
     public String getIssuer() {
         return issuer;
     }
@@ -69,5 +76,45 @@ public class TokenProperties {
 
     public void setMaxPublishedKeys(int maxPublishedKeys) {
         this.maxPublishedKeys = maxPublishedKeys;
+    }
+
+    public String getCookieName() {
+        return cookieName;
+    }
+
+    public void setCookieName(String cookieName) {
+        this.cookieName = cookieName;
+    }
+
+    public String getCookiePath() {
+        return cookiePath;
+    }
+
+    public void setCookiePath(String cookiePath) {
+        this.cookiePath = cookiePath;
+    }
+
+    public String getCookieDomain() {
+        return cookieDomain;
+    }
+
+    public void setCookieDomain(String cookieDomain) {
+        this.cookieDomain = cookieDomain;
+    }
+
+    public String getCookieSameSite() {
+        return cookieSameSite;
+    }
+
+    public void setCookieSameSite(String cookieSameSite) {
+        this.cookieSameSite = cookieSameSite;
+    }
+
+    public boolean isCookieSecure() {
+        return cookieSecure;
+    }
+
+    public void setCookieSecure(boolean cookieSecure) {
+        this.cookieSecure = cookieSecure;
     }
 }

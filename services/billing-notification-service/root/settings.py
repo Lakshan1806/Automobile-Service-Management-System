@@ -47,7 +47,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',  # Django REST Framework
     'notification_service',
+    'admin_service',
 ]
+
+# Custom User Model
+AUTH_USER_MODEL = 'admin_service.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -174,6 +178,7 @@ REST_FRAMEWORK = {
 
     # Authentication (currently not required, but can be added)
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
 

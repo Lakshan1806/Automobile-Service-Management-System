@@ -28,9 +28,7 @@ export function Header() {
     return [{ href: "/signin", label: "Sign In" }];
   }, [authed]);
 
-  const ctaLink = authed
-    ? { href: "/appointments", label: "Book Service" }
-    : { href: "/signup", label: "Get Started" };
+  const ctaLink = authed ? null : { href: "/signup", label: "Get Started" };
 
   const isActive = (href: string) => pathname === href;
 
@@ -79,13 +77,15 @@ export function Header() {
               Sign Out
             </Link>
           )}
-          <Link
-            href={ctaLink.href}
-            className={`cta ${isActive(ctaLink.href) ? "active" : ""}`}
-            onClick={() => setOpen(false)}
-          >
-            {ctaLink.label}
-          </Link>
+          {ctaLink && (
+            <Link
+              href={ctaLink.href}
+              className={`cta ${isActive(ctaLink.href) ? "active" : ""}`}
+              onClick={() => setOpen(false)}
+            >
+              {ctaLink.label}
+            </Link>
+          )}
         </nav>
       </div>
     </header>

@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const { data } = await api.get<{ customer: Customer }>(
-        "/api/profile",
+        "/api/customer/me",
       );
       persistProfile(data.customer);
     } catch (error) {
