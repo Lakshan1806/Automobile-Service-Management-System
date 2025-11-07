@@ -1,7 +1,5 @@
 package com.example.authservice.dto;
 
-import java.time.OffsetDateTime;
-
 public class CustomerResponse {
 
     private Long id;
