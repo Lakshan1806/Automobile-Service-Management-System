@@ -28,7 +28,7 @@ export default function Home() {
   return (
     <div>
       <section className="hero">
-        <div className="container hero-content">
+        <div className="hero-content container">
           <div>
             <p className="eyebrow">Welcome to NovaDrive</p>
             <h1>
@@ -41,13 +41,10 @@ export default function Home() {
               road with a tap.
             </p>
             <div className="hero-actions">
-              <Link href="/appointments" className="button primary">
+              <Link href="/appointments" className="button-primary">
                 Book a Service
               </Link>
-              <Link
-                href="/roadside-assistance"
-                className="button secondary"
-              >
+              <Link href="/roadside-assistance" className="button-secondary">
                 Request Roadside Help
               </Link>
             </div>
@@ -68,7 +65,8 @@ export default function Home() {
                 messaging.
               </li>
               <li>
-                Digital service history that follows each vehicle in your garage.
+                Digital service history that follows each vehicle in your
+                garage.
               </li>
               <li>
                 Seamless roadside verification to keep you and your car safe.
@@ -102,13 +100,14 @@ export default function Home() {
       </section>
 
       <section className="section">
-        <div className="container hero-content">
+        <div className="hero-content container">
           <div>
             <p className="eyebrow">How it works</p>
             <h2>Your day-of-service playbook</h2>
             <p>
               We combined dealership-grade diagnostics with concierge
-              communication. Here is what to expect when you book with NovaDrive.
+              communication. Here is what to expect when you book with
+              NovaDrive.
             </p>
           </div>
           <div className="timeline" aria-label="Service steps">
