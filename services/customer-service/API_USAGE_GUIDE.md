@@ -1,205 +1,107 @@
-# Vehicle API Usage Guide
+# Payment API Usage Guide
 
-## Quick Start - Adding Your First Vehicle
+This guide shows the typical end-to-end flow for integrating the .NET payment service with PayHere.
 
-### Step 1: Create a Test Customer (Development Only)
-
-First, create a customer linked to an AuthUserId from the authentication service:
+## 1. Create a payment intent
 
 ```http
-POST http://localhost:5009/api/vehicles/test-customer
+POST http://localhost:5009/api/payments/create
 Content-Type: application/json
 
 {
-  "authUserId": 1,
-  "email": "john.doe@example.com",
-  "name": "John Doe",
-  "phone": "+94701234567"
+  "itemName": "Full Service Package",
+  "amount": 7500.00,
+  "firstName": "Ishan",
+  "lastName": "Fernando",
+  "email": "ishan@example.com",
+  "phone": "0771234567",
+  "address": "42 Flower Rd",
+  "city": "Colombo",
+  "country": "Sri Lanka"
 }
 ```
 
-**Response:**
+Response:
+
 ```json
 {
-  "message": "Test customer created successfully!",
-  "customerId": 1,
-  "authUserId": 1,
-  "name": "John Doe",
-  "email": "john.doe@example.com"
+  "url": "https://sandbox.payhere.lk/pay/checkout",
+  "data": {
+    "merchant_id": "1232662",
+    "return_url": "http://localhost:5173/success",
+    "cancel_url": "http://localhost:5173/cancel",
+    "notify_url": "http://localhost:5009/api/payments/notify",
+    "order_id": "ORDER-1731085600000",
+    "items": "Full Service Package",
+    "amount": "7500.00",
+    "currency": "LKR",
+    "first_name": "Ishan",
+    "last_name": "Fernando",
+    "email": "ishan@example.com",
+    "phone": "0771234567",
+    "address": "42 Flower Rd",
+    "city": "Colombo",
+    "country": "Sri Lanka",
+    "hash": "F2F0E3..."
+  },
+  "referenceId": "b23a4b9b-e2dd-4d5e-a427-7f85021b848d"
 }
 ```
 
-### Step 2: Add a Vehicle
+The frontend posts `data` directly to `url`. The MD5 hash already satisfies PayHere’s requirements.
 
-Now you can add a vehicle for this customer:
+## 2. (Optional) Reopen the sandbox checkout
 
-```http
-POST http://localhost:5009/api/vehicles/add
-Content-Type: application/json
+If QA needs to retry the payment UI for an existing order, browse to:
 
-{
-  "authUserId": 1,
-  "noPlate": "CP ABC-123",
-  "vehicleModel": "Corolla",
-  "vehicleBrand": "Toyota",
-  "vehicleType": "Car",
-  "vehicleModelYear": 2020,
-  "vehicleRegistrationYear": 2020,
-  "chaseNo": "JT123456789",
-  "millage": 50000,
-  "customerEmail": "john.doe@example.com",
-  "customerName": "John Doe",
-  "customerPhone": "+94701234567"
-}
+```
+GET http://localhost:5009/api/payments/redirect/ORDER-1731085600000
 ```
 
-**Response:**
-```json
-{
-  "message": "Vehicle added successfully!",
-  "vehicleId": "abc123-def456-ghi789",
-  "customerId": 1
-}
+An HTML page appears with a “Proceed” button that auto-submits the stored order fields to PayHere, including a reminder of sandbox card numbers.
+
+## 3. Handle PayHere webhook notifications
+
+Configure PayHere’s “Notify URL” to point at `/api/payments/notify`. A valid callback looks like:
+
+```bash
+curl -X POST http://localhost:5009/api/payments/notify \
+  -F order_id=ORDER-1731085600000 \
+  -F status=2 \
+  -F payment_id=TEST123456 \
+  -F currency=LKR \
+  -F amount=7500.00 \
+  -F md5sig=<computed signature>
 ```
 
-### Step 3: Retrieve Customer Vehicles
+Status codes follow PayHere’s documentation (2 = success, -1 = canceled, etc.). The service recomputes the MD5 signature using the shared secret and will reject mismatches with `401 Unauthorized`.
 
-```http
-GET http://localhost:5009/api/customers/1/vehicles
+## Signature helper
+
+Pseudo-code for reproducing PayHere’s required hash:
+
+```csharp
+var hashedSecret = MD5(merchantSecret).ToUpperInvariant();
+var payloadHash = MD5(merchantId + orderId + amountFormatted + currency + hashedSecret).ToUpperInvariant();
 ```
 
-**Response:**
-```json
-[
-  {
-    "vehicleId": "abc123-def456-ghi789",
-    "noPlate": "CP ABC-123",
-    "vehicleBrand": "Toyota",
-    "vehicleModel": "Corolla"
-  }
-]
-```
+This matches the logic inside `PaymentsController.CreatePayment`. Use `CultureInfo.InvariantCulture` when formatting decimals.
 
-### Step 4: Get Vehicle Appointment Details
+## Test cards
 
-```http
-GET http://localhost:5009/api/vehicles/abc123-def456-ghi789/appointment-details
-```
+The redirect page lists sandbox cards, but the most common set is:
 
-**Response:**
-```json
-{
-  "vehicleId": "abc123-def456-ghi789",
-  "noPlate": "CP ABC-123",
-  "chaseNo": "JT123456789",
-  "vehicleType": "Car",
-  "vehicleBrand": "Toyota",
-  "customerId": "1",
-  "customerPhone": "+94701234567",
-  "customerName": "John Doe",
-  "millage": 50000,
-  "lastServiceDate": "",
-  "vehicleModelYear": 2020,
-  "vehicleRegistrationYear": 2020
-}
-```
+| Brand | Number | Expiry | CVV |
+| ----- | ------ | ------ | --- |
+| Visa | `4916 2175 0161 1292` | any future date | any 3 digits |
+| MasterCard | `5307 7321 2553 1191` | any future date | any 3 digits |
+| AMEX | `3467 8100 5510 225` | any future date | 4 digits |
 
-## Using with Authentication (Production)
+## Error handling
 
-In production, the service will:
-1. Extract `AuthUserId` from the JWT token's `sub` claim
-2. Automatically create/update the customer record
-3. Link vehicles to that customer
+- Invalid request payloads return `400` with ModelState errors.
+- Database issues surface as `500` ProblemDetails responses.
+- Missing order ids during redirect/notify return `404`.
+- Signature mismatches return `401` with a descriptive message plus a `referenceId` for log correlation.
 
-Example with JWT:
-
-```http
-POST http://localhost:5009/api/vehicles/add
-Authorization: Bearer <your-jwt-token>
-Content-Type: application/json
-
-{
-  "noPlate": "CP ABC-123",
-  "vehicleModel": "Corolla",
-  "vehicleBrand": "Toyota",
-  "vehicleType": "Car",
-  "vehicleModelYear": 2020,
-  "vehicleRegistrationYear": 2020,
-  "chaseNo": "JT123456789",
-  "millage": 50000
-}
-```
-
-The `AuthUserId` will be automatically extracted from your JWT token!
-
-## Common Errors and Solutions
-
-### Error: "Authentication required"
-
-**Cause:** No `AuthUserId` provided and no valid JWT token
-
-**Solution:** Either:
-- Include `authUserId` in the request body (development)
-- Provide a valid JWT token in the `Authorization` header (production)
-
-### Error: "Failed to save vehicle"
-
-**Cause:** Foreign key constraint - no customer exists with the provided `CustomerIdFk`
-
-**Solution:** 
-- Use the new `/api/vehicles/add` endpoint which automatically creates customers
-- Or first create a customer using `/api/vehicles/test-customer`
-
-### Error: "No vehicles found for customer"
-
-**Cause:** Customer exists but has no vehicles
-
-**Solution:** This is a valid response - add vehicles using the `/api/vehicles/add` endpoint
-
-## Testing with cURL (Windows PowerShell)
-
-### Create Customer:
-```powershell
-$body = @{
-    authUserId = 1
-    email = "test@example.com"
-    name = "Test User"
-    phone = "+94701234567"
-} | ConvertTo-Json
-
-Invoke-WebRequest -Uri "http://localhost:5009/api/vehicles/test-customer" `
-    -Method POST `
-    -Body $body `
-    -ContentType "application/json"
-```
-
-### Add Vehicle:
-```powershell
-$body = @{
-    authUserId = 1
-    noPlate = "CP ABC-123"
-    vehicleModel = "Corolla"
-    vehicleBrand = "Toyota"
-    vehicleType = "Car"
-    millage = 50000
-    customerName = "Test User"
-    customerEmail = "test@example.com"
-} | ConvertTo-Json
-
-Invoke-WebRequest -Uri "http://localhost:5009/api/vehicles/add" `
-    -Method POST `
-    -Body $body `
-    -ContentType "application/json"
-```
-
-### Get Vehicles:
-```powershell
-Invoke-WebRequest -Uri "http://localhost:5009/api/customers/1/vehicles"
-```
-
-## Notes
-
-- The service is running on `http://localhost:5009`
-- All dates are in ISO-8601 format: `YYYY-MM-DD`
-- Vehicle IDs are auto-generated UUIDs
-- Customer creation is idempotent - calling it multiple times with the same `AuthUserId` will update, not duplicate
+Keep these patterns in mind when wiring the frontend so you can present user-friendly error descriptions.
