@@ -8,26 +8,54 @@ import {
   useMemo,
   useState,
 } from "react";
-import { authApi } from "@/app/auth/api";
+import { authApi, userApi, appointmentApi, locationApi } from "@/app/auth/api";
 import {
   cacheVehicles,
   clearCachedVehicles,
   fetchCustomerVehicles,
   type Customer,
+  type SigninResponse,
 } from "@/app/auth/auth";
 
 type AuthContextValue = {
   customer: Customer | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (profile: Customer) => Promise<void>;
+  login: (authData: SigninResponse) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
 
 const PROFILE_STORAGE_KEY = "novadrive.customer.profile";
+const TOKEN_STORAGE_KEY = "novadrive.customer.token"; 
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+// --- FUNCTION UPDATED ---
+/**
+ * Attaches the JWT as a Bearer token to all API requests.
+ */
+function setupAxiosInterceptors(accessToken: string | null) {
+  const apis = [authApi, userApi, appointmentApi, locationApi];
+  
+  apis.forEach(api => {
+    // Clear existing interceptors to avoid duplicates
+    api.interceptors.request.clear();
+    
+    if (accessToken) {
+      api.interceptors.request.use(config => {
+        // Do not add auth header to login/signup
+        if (config.url?.endsWith('/login') || config.url?.endsWith('/signup')) {
+          return config;
+        }
+        
+        // Add the header
+        config.headers.Authorization = `Bearer ${accessToken}`;
+        return config;
+      });
+    }
+  });
+}
+// --- FUNCTION UPDATED ---
 
 function readStoredProfile(): Customer | null {
   if (typeof window === "undefined") {
@@ -48,35 +76,67 @@ function readStoredProfile(): Customer | null {
   }
 }
 
+// --- FUNCTION UPDATED ---
+function readStoredToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+// --- FUNCTION UPDATED ---
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [customer, setCustomer] = useState<Customer | null>(() =>
     readStoredProfile(),
   );
+  // --- FUNCTION UPDATED ---
+  const [token, setToken] = useState<string | null>(() =>
+    readStoredToken(),
+  );
   const [loading, setLoading] = useState(true);
 
-  const persistProfile = useCallback((profile: Customer | null) => {
-    setCustomer(profile);
+  // --- FUNCTION UPDATED ---
+  // It now also persists the access token
+  const persistAuth = useCallback(
+    (profile: Customer | null, accessToken: string | null) => {
+      setCustomer(profile);
+      setToken(accessToken);
+      
+      // Update the axios interceptors with the new token
+      setupAxiosInterceptors(accessToken);
 
-    if (typeof window === "undefined") {
-      return;
-    }
+      if (typeof window === "undefined") {
+        return;
+      }
 
-    if (profile) {
-      window.localStorage.setItem(
-        PROFILE_STORAGE_KEY,
-        JSON.stringify(profile),
-      );
-    } else {
-      window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-    }
-  }, []);
+      if (profile && accessToken) {
+        window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+        window.localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+      } else {
+        window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+    },
+    [],
+  );
 
   const refresh = useCallback(async () => {
+    // --- FUNCTION UPDATED ---
+    // If we have a token in state, setup interceptors.
+    // Then, try to fetch /me.
+    if (!token) {
+      setLoading(false);
+      throw new Error("No token found");
+    }
+    
+    setupAxiosInterceptors(token); // Setup interceptors on load
     try {
       const { data } = await authApi.get<{ customer: Customer }>(
-        "/api/customer/me",
+        "/api/customers/me" // This now works via Bearer token
       );
-      persistProfile(data.customer);
+      // We already have a token, just persist the profile
+      persistAuth(data.customer, token);
+      
       try {
         const vehicles = await fetchCustomerVehicles(data.customer.id);
         cacheVehicles(vehicles);
@@ -86,11 +146,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.info("Customer session refresh failed.", error);
-      persistProfile(null);
+      persistAuth(null, null); // Clear everything
       clearCachedVehicles();
       throw error;
     }
-  }, [persistProfile]);
+    // --- FUNCTION UPDATED ---
+  }, [persistAuth, token]);
 
   useEffect(() => {
     let active = true;
@@ -114,36 +175,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refresh]);
 
+  // --- FUNCTION UPDATED ---
   const login = useCallback(
-    async (profile: Customer) => {
-      persistProfile(profile);
+    async (authData: SigninResponse) => {
+      persistAuth(authData.customer, authData.accessToken);
       setLoading(false);
     },
-    [persistProfile],
+    [persistAuth],
   );
 
+  // --- FUNCTION UPDATED ---
   const logout = useCallback(async () => {
     try {
-      await authApi.post("/api/customers/logout");
+      // Still call logout to invalidate cookie (if server does that)
+      await authApi.post("/api/customers/logout"); 
     } catch (error) {
       console.info("Customer logout request failed.", error);
     } finally {
-      persistProfile(null);
+      persistAuth(null, null); // Clear token and profile
       clearCachedVehicles();
       setLoading(false);
     }
-  }, [persistProfile]);
+  }, [persistAuth]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       customer,
       loading,
-      isAuthenticated: Boolean(customer),
+      isAuthenticated: Boolean(customer && token),
       login,
       logout,
       refresh,
     }),
-    [customer, loading, login, logout, refresh],
+    [customer, token, loading, login, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

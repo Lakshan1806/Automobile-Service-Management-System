@@ -69,7 +69,7 @@ public class CustomerController {
         }
 
         ResponseCookie cookie = builder.build();
-        auth.setAccessToken(null);
+//        auth.setAccessToken(null);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
