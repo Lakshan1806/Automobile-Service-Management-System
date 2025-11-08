@@ -148,4 +148,6 @@ AUTH_SERVICE_ISSUER = os.getenv("AUTH_SERVICE_ISSUER", "http://localhost:8080")
 AUTH_SERVICE_AUDIENCE = os.getenv("AUTH_SERVICE_AUDIENCE", "myco-apis")
 AUTH_JWKS_CACHE_SECONDS = int(os.getenv("AUTH_JWKS_CACHE_SECONDS", 300))
 
+EMPLOYEE_INVITE_BASE_URL = os.getenv("EMPLOYEE_INVITE_BASE_URL", "http://localhost:5173/create-password")
+
 

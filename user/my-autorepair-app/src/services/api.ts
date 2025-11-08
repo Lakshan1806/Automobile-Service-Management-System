@@ -368,6 +368,10 @@ const mockApi = {
     return { ...appointment };
   },
 
+  activateEmployeeAccount: async () => {
+    await delay(300);
+  },
+
 };
 
 interface AdminEmployeeDto {
@@ -694,6 +698,20 @@ const realApi = {
       const payload: EmployeeAuthResponseDto = await response.json();
       return mapEmployeeAuthToUser(payload);
     },
+
+    activateEmployeeAccount: async (inviteToken: string, password: string): Promise<void> => {
+      const response = await fetch(`${AUTH_API_BASE}/api/employees/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inviteToken, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await extractErrorMessage(response));
+      }
+    },
 };
 
 
@@ -702,6 +720,7 @@ const api = USE_MOCK ? mockApi : realApi;
 
 export const authService = {
   login: api.login,
+  activateEmployeeAccount: api.activateEmployeeAccount,
 };
 
 export const adminService = {

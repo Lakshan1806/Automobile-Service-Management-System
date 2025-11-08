@@ -52,7 +52,8 @@ class EmployeeCreateView(AdminProtectedView, generics.CreateAPIView):
             raise APIException("Error syncing employee account with authentication service") from exc
 
     def send_invite_email(self, emp):
-        invite_link = f"https://auth.novadrive.com/create-password/{emp.invite_token}/"
+        base_url = getattr(settings, "EMPLOYEE_INVITE_BASE_URL", "http://localhost:5173/create-password")
+        invite_link = f"{base_url.rstrip('/')}/{emp.invite_token}/"
         subject = "Set Up Your Novadrive Account"
         message = (
             f"Hi {emp.name},\n\n"
