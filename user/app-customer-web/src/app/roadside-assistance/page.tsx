@@ -1,12 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/auth/AuthContext";
 import {
   readCachedVehicles,
   type CustomerVehicle,
 } from "@/app/auth/auth";
 import { locationApi } from "@/app/auth/api";
+import { saveActiveRequest } from "@/app/roadside-assistance/activeRequestStorage";
 
 type RequestForm = {
   vehicleId: string;
@@ -40,6 +42,7 @@ type RoadsideSubmitResponse = {
 };
 
 export default function RoadsideAssistancePage() {
+  const router = useRouter();
   const { customer } = useAuth();
   const [form, setForm] = useState<RequestForm>(initialForm);
   const [vehicles, setVehicles] = useState<CustomerVehicle[]>([]);
@@ -109,6 +112,12 @@ export default function RoadsideAssistancePage() {
         `Your request has been sent. Your request id is ${data.reference}. A technician will reach out to you shortly.`,
       );
       setForm((current) => ({ ...current, description: "" }));
+      saveActiveRequest({
+        requestId: data.requestId,
+        reference: data.reference,
+        status: data.status,
+      });
+      router.push(`/tracking?requestId=${data.requestId}`);
     } catch (submissionError) {
       console.error(
         "Failed to submit roadside assistance request:",
