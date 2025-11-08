@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signin } from "@/app/auth/auth";
+import { signin, type SigninResponse } from "@/app/auth/auth";
 import { useAuth } from "@/app/auth/AuthContext";
 
 function resolveRedirectTarget(value: string | null): string {
@@ -40,8 +40,8 @@ export default function SignInPage() {
     setIsLoading(true);
 
     try {
-      const response = await signin({ email, password });
-      await login(response);
+      const authResponse = await signin({ email, password }); // 1. Get the full response
+      await login(authResponse); // 2. Pass the full response (with token) to context
       router.replace(redirectTarget);
     } catch (error) {
       const message =

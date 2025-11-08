@@ -30,7 +30,7 @@ public class VehicleServiceClient {
         log.info("Fetching vehicle data for ID: {}", vehicleId);
 
         return webClient.get()
-                .uri("/vehicles/{vehicleId}", vehicleId)
+                .uri("/vehicles/{vehicleId}/appointment-details", vehicleId) // <-- CORRECT
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
                     log.error("Client error when fetching vehicle data: {}", response.statusCode());

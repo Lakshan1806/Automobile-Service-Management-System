@@ -1,8 +1,6 @@
 package com.nivethan.appointmentservices.Controller;
 
-import com.nivethan.appointmentservices.Dto.AppointmentRequestDto;
-import com.nivethan.appointmentservices.Dto.AppointmentResponseDto;
-import com.nivethan.appointmentservices.Dto.VehicleSummaryDto;
+import com.nivethan.appointmentservices.Dto.*;
 import com.nivethan.appointmentservices.Model.AppointmentStatus;
 import com.nivethan.appointmentservices.Service.AppointmentService;
 import jakarta.validation.Valid;
@@ -20,6 +18,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AppointmentController {
     private final AppointmentService appointmentService;
+
+    // --- ADD THIS NEW ENDPOINT ---
+    @PostMapping("/predict")
+    public ResponseEntity<FastApiResponseDto> getPrediction(
+            @Valid @RequestBody PredictionRequestDto requestDto,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String customerId = jwt.getSubject();
+        FastApiResponseDto prediction = appointmentService.getPrediction(requestDto, customerId);
+        return ResponseEntity.ok(prediction);
+    }
 
     @GetMapping("/my-vehicles")
     public Mono<ResponseEntity<List<VehicleSummaryDto>>> getMyVehicles(

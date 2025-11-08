@@ -1,3 +1,7 @@
+import dotenv from "dotenv";
+
+dotenv.config();
+
 const REQUIRED_FETCH_ERROR =
   "Global fetch is not available. Run on Node 18+ or provide a fetch polyfill.";
 
