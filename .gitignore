@@ -4,15 +4,15 @@
 user/my-autorepair-app/
 
 
-# Customer-service local artifacts
-services/customer-service/bin/
-services/customer-service/obj/
-services/customer-service/*.user
-services/customer-service/*.rsuser
-services/customer-service/*.suo
-services/customer-service/appsettings.Development.json
-services/customer-service/appsettings.Local.json
-services/customer-service/appsettings.*.local.json
+# Payment-service local artifacts
+services/payment-service/bin/
+services/payment-service/obj/
+services/payment-service/*.user
+services/payment-service/*.rsuser
+services/payment-service/*.suo
+services/payment-service/appsettings.Development.json
+services/payment-service/appsettings.Local.json
+services/payment-service/appsettings.*.local.json
 
 # Crash logs from local test runs
 hs_err_pid*.log
