@@ -1,0 +1,5 @@
+{
+  "name": "AutoRepair Pro UI",
+  "description": "A role-based automobile repair web app UI (Admin, Manager, Technician) with a mock data layer. This application provides a complete frontend experience for managing employees, branches, services, products, appointments, and more, tailored to different user roles within an auto repair business.",
+  "requestFramePermissions": []
+}
