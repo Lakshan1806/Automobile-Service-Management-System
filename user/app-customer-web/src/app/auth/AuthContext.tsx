@@ -16,6 +16,7 @@ import {
   type Customer,
   type SigninResponse,
 } from "@/app/auth/auth";
+import { clearActiveRequest } from "@/app/roadside-assistance/activeRequestStorage";
 
 type AuthContextValue = {
   customer: Customer | null;
@@ -129,10 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("No token found");
     }
     
-    setupAxiosInterceptors(token); // Setup interceptors on load
+    setupAxiosInterceptors(token); 
     try {
       const { data } = await authApi.get<{ customer: Customer }>(
-        "/api/customers/me" // This now works via Bearer token
+        "/api/customers/me" 
       );
       // We already have a token, just persist the profile
       persistAuth(data.customer, token);
@@ -148,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.info("Customer session refresh failed.", error);
       persistAuth(null, null); // Clear everything
       clearCachedVehicles();
+      clearActiveRequest();
       throw error;
     }
     // --- FUNCTION UPDATED ---
@@ -194,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       persistAuth(null, null); // Clear token and profile
       clearCachedVehicles();
+      clearActiveRequest();
       setLoading(false);
     }
   }, [persistAuth]);
