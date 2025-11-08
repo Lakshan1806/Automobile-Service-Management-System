@@ -53,4 +53,3 @@ const defaultClient = new AuthServiceClient({
 
 export default defaultClient;
 export { AuthServiceClient };
-
