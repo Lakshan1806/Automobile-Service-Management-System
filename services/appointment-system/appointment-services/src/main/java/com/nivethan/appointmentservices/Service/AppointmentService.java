@@ -7,15 +7,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.nivethan.appointmentservices.Dto.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import com.nivethan.appointmentservices.Dto.AppointmentRequestDto;
-import com.nivethan.appointmentservices.Dto.AppointmentResponseDto;
-import com.nivethan.appointmentservices.Dto.FastApiRequestDto;
-import com.nivethan.appointmentservices.Dto.FastApiResponseDto;
-import com.nivethan.appointmentservices.Dto.VehicleDataDto;
-import com.nivethan.appointmentservices.Dto.VehicleSummaryDto;
 import com.nivethan.appointmentservices.Model.AppointmentStatus;
 import com.nivethan.appointmentservices.Model.RepairAppointmentRequest;
 import com.nivethan.appointmentservices.Repository.RepairAppointmentRepository;
@@ -49,6 +44,50 @@ public class AppointmentService {
         log.info("Service: Getting vehicle summary list for customer: {}", customerId);
         return vehicleServiceClient.getVehiclesForCustomer(customerId);
     }
+    // --- ADD THIS NEW METHOD ---
+    @Transactional
+    public FastApiResponseDto getPrediction(PredictionRequestDto requestDto, String loggedInCustomerId) {
+        log.info("Getting prediction for vehicle ID: {}", requestDto.getVehicleId());
+
+        // Step 1: Get vehicle data
+        VehicleDataDto vehicleData = vehicleServiceClient.getVehicleData(requestDto.getVehicleId())
+                .block();
+
+        if (vehicleData == null) {
+            throw new RuntimeException("Vehicle not found with ID: " + requestDto.getVehicleId());
+        }
+
+        // Step 2: Security Check
+        if (!vehicleData.getCustomerId().equals(loggedInCustomerId)) {
+            log.warn("SECURITY VIOLATION: Customer {} tried to get prediction for vehicle {} owned by {}",
+                    loggedInCustomerId, vehicleData.getVehicleId(), vehicleData.getCustomerId());
+            throw new AccessDeniedException("You do not have permission for this vehicle.");
+        }
+
+        // Step 3: Prepare data for FastAPI
+        FastApiRequestDto fastApiRequest = new FastApiRequestDto();
+        fastApiRequest.setVehicleType(vehicleData.getVehicleType());
+        fastApiRequest.setVehicleBrand(vehicleData.getVehicleBrand());
+        fastApiRequest.setRepairType(requestDto.getRepairType());
+
+        // Use the mileage from the request, as it might be fresher
+        fastApiRequest.setMillage(requestDto.getMillage().toString());
+
+        LocalDate lastServiceLocalDate = vehicleData.getLastServiceDate();
+        if (lastServiceLocalDate != null) {
+            fastApiRequest.setLastService(lastServiceLocalDate.format(DATE_FORMATTER));
+        }
+
+        fastApiRequest.setVehicleModelYear(vehicleData.getVehicleModelYear());
+
+        log.info("Calling FastAPI with prediction request: {}", fastApiRequest);
+
+        // Step 4: Get and return prediction
+        return fastApiServiceClient.getSuggestedStartDate(fastApiRequest)
+                .block();
+    }
+
+    // ... (rest of your existing methods:
 
     @Transactional
     public AppointmentResponseDto createAppointment(AppointmentRequestDto requestDto, String loggedInCustomerId) {

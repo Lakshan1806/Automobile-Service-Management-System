@@ -17,10 +17,17 @@ export type CustomerVehicle = {
   vehicleModel: string;
 };
 
+
 export type SigninPayload = { email: string; password: string };
 export type SignupPayload = { name: string; email: string; password: string };
 
-export type SigninResponse = Customer;
+export type SigninResponse = {
+  customer: Customer;
+  accessToken: string;
+  expiresIn: number;
+  realm: string;
+  roles: string[];
+};
 export type SignupResponse = { message: string; name: string; email: string };
 
 export function cacheVehicles(vehicles: CustomerVehicle[]): void {
@@ -69,19 +76,25 @@ export async function fetchCustomerVehicles(
 }
 
 export async function signin(payload: SigninPayload): Promise<SigninResponse> {
-  await authApi.post("/api/customers/login", payload);
-  const { data } = await authApi.get<{ customer: Customer }>("/api/customers/me");
-  const customer = data.customer;
+  // The login response is now based SigninResponse
+  const { data: authResponse } = await authApi.post<SigninResponse>(
+    "/api/customers/login", 
+    payload
+  );
+
+  // We no longer need the extra /me call, since /login returns everything.
+  // const { data } = await authApi.get<{ customer: Customer }>("/api/customers/me");
+  // const customer = data.customer;
 
   try {
-    const vehicles = await fetchCustomerVehicles(customer.id);
+    const vehicles = await fetchCustomerVehicles(authResponse.customer.id);
     cacheVehicles(vehicles);
   } catch (error) {
     console.info("Unable to preload vehicles after signin.", error);
     clearCachedVehicles();
   }
 
-  return customer;
+  return authResponse; 
 }
 
 export async function signup(payload: SignupPayload): Promise<SignupResponse> {

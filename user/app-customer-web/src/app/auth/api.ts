@@ -15,4 +15,9 @@ const locationApi = axios.create({
   withCredentials: true,
 }); 
 
-export { authApi, userApi, locationApi };
+const appointmentApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_APPOINTMENT_SERVICE_API_URL,
+  withCredentials: true,
+});
+
+export { authApi, userApi, locationApi, appointmentApi }; 
