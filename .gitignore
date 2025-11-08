@@ -1,6 +1,8 @@
 /.vs/
 /mock-back/
 .DS_Store
+user/my-autorepair-app/
+
 
 # Payment-service local artifacts
 services/payment-service/bin/
