@@ -1,72 +1,185 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Protected } from "@/app/auth/Protected";
+import { useAuth } from "@/app/auth/AuthContext";
+import {
+  cacheVehicles,
+  fetchCustomerVehicles,
+  readCachedVehicles,
+  type CustomerVehicle,
+} from "@/app/auth/auth";
+import { userApi } from "@/app/auth/api";
 
 type GarageVehicle = {
-  id: string;
-  nickname: string;
-  year: string;
-  model: string;
-  vin: string;
-  mileage: number;
-  primary: boolean;
-  lastService: string;
+  vehicleId: string;
+  numberPlate: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  vehicleType?: string | null;
+  vehicleModelYear?: number | null;
+  vehicleRegistrationYear?: number | null;
+  mileage?: number | null;
+  lastServiceDate?: string | null;
 };
-
-const initialGarage: GarageVehicle[] = [
-  {
-    id: "1",
-    nickname: "City Runner",
-    year: "2023",
-    model: "NovaDrive Pulse EV",
-    vin: "NDPE-3284-XL91",
-    mileage: 12450,
-    primary: true,
-    lastService: "October 18, 2024",
-  },
-  {
-    id: "2",
-    nickname: "Weekend Explorer",
-    year: "2021",
-    model: "NovaDrive Terrain AWD",
-    vin: "NDTN-5821-QP33",
-    mileage: 34780,
-    primary: false,
-    lastService: "July 2, 2024",
-  },
-];
 
 type VehicleForm = {
-  nickname: string;
-  year: string;
-  model: string;
-  vin: string;
+  numberPlate: string;
+  chassisNo: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  vehicleType: string;
   mileage: string;
-  primary: boolean;
+  vehicleModelYear: string;
+  vehicleRegistrationYear: string;
+  lastServiceDate: string;
 };
+
+const VEHICLE_TYPES = [
+  { value: "CAR", label: "Car" },
+  { value: "SUV", label: "SUV" },
+  { value: "TRUCK", label: "Truck" },
+  { value: "VAN", label: "Van" },
+  { value: "MOTORCYCLE", label: "Motorcycle" },
+  { value: "OTHER", label: "Other" },
+] as const;
 
 const initialForm: VehicleForm = {
-  nickname: "",
-  year: "",
-  model: "",
-  vin: "",
+  numberPlate: "",
+  chassisNo: "",
+  vehicleBrand: "",
+  vehicleModel: "",
+  vehicleType: "CAR",
   mileage: "",
-  primary: false,
+  vehicleModelYear: "",
+  vehicleRegistrationYear: "",
+  lastServiceDate: "",
 };
 
+function customerVehicleToGarage(vehicle: CustomerVehicle): GarageVehicle {
+  return {
+    vehicleId: vehicle.vehicleId,
+    numberPlate: vehicle.noPlate,
+    vehicleBrand: vehicle.vehicleBrand,
+    vehicleModel: vehicle.vehicleModel,
+  };
+}
+
+function serverVehicleToGarage(vehicle: unknown): GarageVehicle {
+  if (!vehicle || typeof vehicle !== "object") {
+    throw new Error("Vehicle payload missing");
+  }
+  const record = vehicle as Record<string, unknown>;
+  const idCandidate = record.vehicleId ?? record._id ?? record.id;
+  const vehicleId =
+    typeof idCandidate === "string"
+      ? idCandidate
+      : typeof (idCandidate as { toString?: () => string })?.toString ===
+        "function"
+        ? (idCandidate as { toString: () => string }).toString()
+        : `tmp-${Date.now()}`;
+
+  const numberPlate =
+    typeof record.numberPlate === "string"
+      ? record.numberPlate
+      : typeof record.noPlate === "string"
+        ? record.noPlate
+        : "";
+  const mileage =
+    typeof record.mileage === "number"
+      ? record.mileage
+      : Number.isFinite(Number(record.mileage))
+        ? Number(record.mileage)
+        : null;
+
+  let lastService: string | null = null;
+  if (record.lastServiceDate) {
+    const date = new Date(record.lastServiceDate as string);
+    if (!Number.isNaN(date.getTime())) {
+      lastService = date.toISOString();
+    }
+  }
+
+  return {
+    vehicleId,
+    numberPlate,
+    vehicleBrand:
+      typeof record.vehicleBrand === "string" ? record.vehicleBrand : "",
+    vehicleModel:
+      typeof record.vehicleModel === "string" ? record.vehicleModel : "",
+    vehicleType:
+      typeof record.vehicleType === "string" ? record.vehicleType : null,
+    mileage,
+    vehicleModelYear:
+      typeof record.vehicleModelYear === "number"
+        ? record.vehicleModelYear
+        : null,
+    vehicleRegistrationYear:
+      typeof record.vehicleRegistrationYear === "number"
+        ? record.vehicleRegistrationYear
+        : null,
+    lastServiceDate: lastService,
+  };
+}
+
+function garageVehicleToCache(vehicle: GarageVehicle): CustomerVehicle {
+  return {
+    vehicleId: vehicle.vehicleId,
+    noPlate: vehicle.numberPlate,
+    vehicleBrand: vehicle.vehicleBrand,
+    vehicleModel: vehicle.vehicleModel,
+  };
+}
+
 function AccountContent() {
-  const [vehicles, setVehicles] = useState(initialGarage);
-  const [form, setForm] = useState(initialForm);
+  const { customer } = useAuth();
+  const [vehicles, setVehicles] = useState<GarageVehicle[]>(() =>
+    readCachedVehicles().map(customerVehicleToGarage),
+  );
+  const [form, setForm] = useState<VehicleForm>(initialForm);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<null | {
     type: "success" | "error";
     message: string;
   }>(null);
 
-  const totalMileage = useMemo(
-    () => vehicles.reduce((total, vehicle) => total + vehicle.mileage, 0),
-    [vehicles],
-  );
+  useEffect(() => {
+    if (!customer?.id) {
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    fetchCustomerVehicles(customer.id)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+        const normalized = result.map(customerVehicleToGarage);
+        setVehicles(normalized);
+        cacheVehicles(result);
+      })
+      .catch((error) => {
+        console.error("Unable to load vehicles", error);
+        if (active) {
+          setFeedback({
+            type: "error",
+            message:
+              "We could not load your vehicles. Please try again in a moment.",
+          });
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [customer?.id]);
 
   function handleChange<K extends keyof VehicleForm>(
     key: K,
@@ -75,213 +188,317 @@ function AccountContent() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function resetForm() {
-    setForm(initialForm);
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFeedback(null);
-
-    if (!form.year || !form.model || !form.vin) {
-      setFeedback({
-        type: "error",
-        message: "Please complete the required fields.",
-      });
+    if (!customer?.id) {
       return;
     }
 
-    const parsedMileage = Number(form.mileage.replace(/,/g, "")) || 0;
+    setFeedback(null);
+    setSubmitting(true);
 
-    const newVehicle: GarageVehicle = {
-      id: Date.now().toString(36),
-      nickname: form.nickname.trim() || `${form.year} ${form.model}`,
-      year: form.year,
-      model: form.model,
-      vin: form.vin,
-      mileage: parsedMileage,
-      primary: form.primary,
-      lastService: new Date().toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
+    const payload = {
+      numberPlate: form.numberPlate.trim().toUpperCase(),
+      chassisNo: form.chassisNo.trim().toUpperCase(),
+      vehicleBrand: form.vehicleBrand.trim(),
+      vehicleModel: form.vehicleModel.trim(),
+      vehicleType: form.vehicleType,
+      mileage: form.mileage ? Number(form.mileage) : undefined,
+      vehicleModelYear: form.vehicleModelYear
+        ? Number(form.vehicleModelYear)
+        : undefined,
+      vehicleRegistrationYear: form.vehicleRegistrationYear
+        ? Number(form.vehicleRegistrationYear)
+        : undefined,
+      lastServiceDate: form.lastServiceDate || undefined,
     };
 
-    setVehicles((current) => {
-      const nextVehicles = form.primary
-        ? current.map((vehicle) => ({ ...vehicle, primary: false }))
-        : current.slice();
-      return [...nextVehicles, newVehicle];
-    });
-
-    setFeedback({
-      type: "success",
-      message: `${newVehicle.nickname} was added to your garage.`,
-    });
-    resetForm();
+    try {
+      const { data } = await userApi.post<{ vehicle: unknown }>(
+        `/api/customers/${encodeURIComponent(customer.id)}/vehicles`,
+        payload,
+      );
+      const created = serverVehicleToGarage(data.vehicle);
+      setVehicles((current) => {
+        const next = [...current, created];
+        cacheVehicles(next.map(garageVehicleToCache));
+        return next;
+      });
+      setFeedback({
+        type: "success",
+        message: `Vehicle ${created.numberPlate} was added to your garage.`,
+      });
+      setForm(initialForm);
+    } catch (error) {
+      console.error("Failed to add vehicle", error);
+      let message =
+        "We could not add that vehicle. Please review the details and try again.";
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response
+      ) {
+        const data = (error.response as { data?: unknown }).data;
+        if (
+          data &&
+          typeof data === "object" &&
+          "message" in data &&
+          typeof (data as { message?: unknown }).message === "string"
+        ) {
+          message = (data as { message: string }).message;
+        }
+      }
+      setFeedback({ type: "error", message });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function removeVehicle(id: string) {
-    setVehicles((current) => current.filter((vehicle) => vehicle.id !== id));
-  }
+  const totalVehicles = vehicles.length;
+  const brandCount = useMemo(() => {
+    return new Set(vehicles.map((vehicle) => vehicle.vehicleBrand)).size;
+  }, [vehicles]);
 
   return (
     <section className="section">
-      <div className="container">
-        <div className="section-header">
-          <p className="eyebrow">Your garage</p>
-          <h1>Manage vehicles and preferences</h1>
+      <div className="container hero-content">
+        <div>
+          <p className="eyebrow">Account overview</p>
+          <h1>Your NovaDrive garage</h1>
           <p>
-            Keep your garage synced so technicians arrive prepared. Update VIN
-            details, mileage, and designate a primary vehicle for faster service
-            check-ins.
+            Register every vehicle tied to your NovaDrive account. Accurate
+            records help technicians verify ownership, dispatch roadside
+            support, and tailor maintenance plans.
           </p>
-        </div>
-
-        <div className="hero-content">
-          <div className="card">
-            <h3>Garage summary</h3>
-            <ul>
-              <li>
-                <strong>{vehicles.length}</strong> vehicles connected to your
-                account.
-              </li>
-              <li>
-                <strong>{totalMileage.toLocaleString()}</strong> total recorded
-                miles across your fleet.
-              </li>
-              <li>
-                Update driver preferences to tailor reminders and valet support.
-              </li>
-            </ul>
-          </div>
-
-          <form className="form-card" onSubmit={handleSubmit}>
-            <h2>Add a vehicle</h2>
-            <div className="form-grid">
-              <div className="form-field">
-                <label htmlFor="nickname">Nickname</label>
-                <input
-                  id="nickname"
-                  value={form.nickname}
-                  onChange={(event) =>
-                    handleChange("nickname", event.target.value)
-                  }
-                  placeholder="Family SUV"
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="year">Model year*</label>
-                <input
-                  id="year"
-                  value={form.year}
-                  onChange={(event) => handleChange("year", event.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="model">Make & model*</label>
-                <input
-                  id="model"
-                  value={form.model}
-                  onChange={(event) =>
-                    handleChange("model", event.target.value)
-                  }
-                  placeholder="NovaDrive Pulse EV"
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="vin">VIN*</label>
-                <input
-                  id="vin"
-                  value={form.vin}
-                  onChange={(event) =>
-                    handleChange("vin", event.target.value.toUpperCase())
-                  }
-                  placeholder="17-character VIN"
-                  minLength={11}
-                  maxLength={17}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="mileage">Current mileage</label>
-                <input
-                  id="mileage"
-                  value={form.mileage}
-                  onChange={(event) =>
-                    handleChange(
-                      "mileage",
-                      event.target.value.replace(/[^0-9,]/g, ""),
-                    )
-                  }
-                  placeholder="34,780"
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={form.primary}
-                    onChange={(event) =>
-                      handleChange("primary", event.target.checked)
-                    }
-                  />
-                  Set as primary vehicle
-                </label>
-              </div>
-            </div>
-            <div className="form-actions">
-              <button className="button primary" type="submit">
-                Add to garage
-              </button>
-            </div>
-            {feedback && (
-              <div
-                className={`feedback ${feedback.type === "error" ? "error" : ""}`}
-                role="status"
-                aria-live="polite"
-              >
-                {feedback.message}
-              </div>
-            )}
-          </form>
-        </div>
-
-        <div className="vehicle-list" aria-live="polite">
-          {vehicles.map((vehicle) => (
-            <article key={vehicle.id} className="vehicle-card">
-              <div className="vehicle-header">
-                <div>
-                  <h3>
-                    {vehicle.nickname} <span>• {vehicle.year}</span>
-                  </h3>
-                  <p>{vehicle.model}</p>
-                </div>
-                {vehicle.primary && (
-                  <span className="primary-badge">Primary</span>
-                )}
-              </div>
-              <div className="vehicle-meta">
-                <p>
-                  <strong>VIN:</strong> {vehicle.vin}
-                </p>
-                <p>
-                  <strong>Mileage:</strong> {vehicle.mileage.toLocaleString()}{" "}
-                  miles
-                </p>
-                <p>
-                  <strong>Last service:</strong> {vehicle.lastService}
-                </p>
-              </div>
-              <button type="button" onClick={() => removeVehicle(vehicle.id)}>
-                Remove from garage
-              </button>
+          <div className="stats-grid">
+            <article>
+              <p className="eyebrow">Vehicles on file</p>
+              <h3>{totalVehicles}</h3>
             </article>
-          ))}
+            <article>
+              <p className="eyebrow">Brands represented</p>
+              <h3>{brandCount}</h3>
+            </article>
+            <article>
+              <p className="eyebrow">Last update</p>
+              <h3>
+                {vehicles.length > 0
+                  ? new Date(
+                      vehicles[vehicles.length - 1].lastServiceDate ??
+                        Date.now(),
+                    ).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "—"}
+              </h3>
+            </article>
+          </div>
         </div>
+
+        <form className="form-card" onSubmit={handleSubmit}>
+          <p className="eyebrow">Add vehicle</p>
+          <h2>Register a new vehicle</h2>
+          <div className="form-grid">
+            <div className="form-field">
+              <label htmlFor="numberPlate">Number plate*</label>
+              <input
+                id="numberPlate"
+                value={form.numberPlate}
+                onChange={(event) =>
+                  handleChange("numberPlate", event.target.value.toUpperCase())
+                }
+                placeholder="ABC-1234"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="chassisNo">Chassis / VIN*</label>
+              <input
+                id="chassisNo"
+                value={form.chassisNo}
+                onChange={(event) =>
+                  handleChange("chassisNo", event.target.value.toUpperCase())
+                }
+                placeholder="17-character VIN"
+                minLength={11}
+                maxLength={17}
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="vehicleBrand">Make / brand*</label>
+              <input
+                id="vehicleBrand"
+                value={form.vehicleBrand}
+                onChange={(event) =>
+                  handleChange("vehicleBrand", event.target.value)
+                }
+                placeholder="NovaDrive"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="vehicleModel">Model*</label>
+              <input
+                id="vehicleModel"
+                value={form.vehicleModel}
+                onChange={(event) =>
+                  handleChange("vehicleModel", event.target.value)
+                }
+                placeholder="Pulse EV"
+                required
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="vehicleType">Vehicle type</label>
+              <select
+                id="vehicleType"
+                value={form.vehicleType}
+                onChange={(event) =>
+                  handleChange("vehicleType", event.target.value)
+                }
+              >
+                {VEHICLE_TYPES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="vehicleModelYear">Model year</label>
+              <input
+                id="vehicleModelYear"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={form.vehicleModelYear}
+                onChange={(event) =>
+                  handleChange("vehicleModelYear", event.target.value)
+                }
+                placeholder="2024"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="vehicleRegistrationYear">Registration year</label>
+              <input
+                id="vehicleRegistrationYear"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={form.vehicleRegistrationYear}
+                onChange={(event) =>
+                  handleChange("vehicleRegistrationYear", event.target.value)
+                }
+                placeholder="2023"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="mileage">Current mileage</label>
+              <input
+                id="mileage"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={form.mileage}
+                onChange={(event) =>
+                  handleChange("mileage", event.target.value.replace(/\D/g, ""))
+                }
+                placeholder="24500"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="lastServiceDate">Last service date</label>
+              <input
+                id="lastServiceDate"
+                type="date"
+                value={form.lastServiceDate}
+                onChange={(event) =>
+                  handleChange("lastServiceDate", event.target.value)
+                }
+              />
+            </div>
+          </div>
+          <div className="form-actions">
+            <button className="button primary" type="submit" disabled={submitting}>
+              {submitting ? "Adding vehicle..." : "Add to garage"}
+            </button>
+          </div>
+          {feedback && (
+            <div
+              className={`feedback ${feedback.type === "error" ? "error" : ""}`}
+              role="status"
+              aria-live="polite"
+            >
+              {feedback.message}
+            </div>
+          )}
+        </form>
+      </div>
+
+      <div className="container vehicle-list" aria-live="polite">
+        {loading ? (
+          <article className="vehicle-card">
+            <p>Loading your vehicles...</p>
+          </article>
+        ) : vehicles.length === 0 ? (
+          <article className="vehicle-card">
+            <h3>No vehicles yet</h3>
+            <p>
+              Add your first vehicle to unlock roadside assistance and service
+              scheduling.
+            </p>
+          </article>
+        ) : (
+          vehicles.map((vehicle) => {
+            const lastServiceLabel = vehicle.lastServiceDate
+              ? new Date(vehicle.lastServiceDate).toLocaleDateString(
+                  undefined,
+                  {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  },
+                )
+              : "Not recorded";
+            return (
+              <article key={vehicle.vehicleId} className="vehicle-card">
+                <div className="vehicle-header">
+                  <div>
+                    <h3>
+                      {vehicle.vehicleBrand} {vehicle.vehicleModel}
+                    </h3>
+                    <p>{vehicle.numberPlate}</p>
+                  </div>
+                  {vehicle.vehicleType && (
+                    <span className="primary-badge">{vehicle.vehicleType}</span>
+                  )}
+                </div>
+                <div className="vehicle-meta">
+                  <p>
+                    <strong>Model year:</strong>{" "}
+                    {vehicle.vehicleModelYear ?? "—"}
+                  </p>
+                  <p>
+                    <strong>Registration year:</strong>{" "}
+                    {vehicle.vehicleRegistrationYear ?? "—"}
+                  </p>
+                  <p>
+                    <strong>Mileage:</strong>{" "}
+                    {vehicle.mileage !== null && vehicle.mileage !== undefined
+                      ? `${vehicle.mileage.toLocaleString()} km`
+                      : "—"}
+                  </p>
+                  <p>
+                    <strong>Last service:</strong> {lastServiceLabel}
+                  </p>
+                </div>
+              </article>
+            );
+          })
+        )}
       </div>
     </section>
   );

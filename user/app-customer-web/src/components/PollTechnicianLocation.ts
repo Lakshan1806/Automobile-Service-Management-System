@@ -1,33 +1,42 @@
 "use client";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { locationApi } from "@/app/auth/api";
 
-function useTechnicianLocation() {
-  const [location, setLocation] = useState<{ lat: number; lng: number }>({
-    lat: 0,
-    lng: 0,
-  });
+type LatLng = { lat: number; lng: number };
+type TechnicianLocationOptions = {
+  requestId?: string | null;
+};
+
+function useTechnicianLocation(options: TechnicianLocationOptions) {
+  const { requestId } = options;
+  const [location, setLocation] = useState<LatLng | null>(null);
 
   useEffect(() => {
+    if (!requestId) {
+      return;
+    }
+
     const fetchLocation = async () => {
       try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/technician_location`,
-          {
-            params: { requestId: "68e350f894c77c1f8bab2710" },
-          }
-        );
+        const response = await locationApi.get("/api/technician_location", {
+          params: { requestId },
+        });
         const { lat, lng } = response.data;
-        setLocation({ lat, lng });
+        if (typeof lat === "number" && typeof lng === "number") {
+          setLocation({ lat, lng });
+        } else {
+          setLocation(null);
+        }
       } catch (err) {
-        console.error("GET /api/technician-location failed:", err);
+        console.error("GET /api/technician_location failed:", err);
       }
     };
 
     fetchLocation();
     const intervalId = setInterval(fetchLocation, 10000);
     return () => clearInterval(intervalId);
-  }, []);
+  }, [requestId]);
+
   return location;
 }
 

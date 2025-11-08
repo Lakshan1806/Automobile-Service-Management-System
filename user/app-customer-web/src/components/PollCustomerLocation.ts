@@ -1,32 +1,41 @@
 "use client";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { locationApi } from "@/app/auth/api";
 
-function useLocationWatcher() {
-  const [location, setLocation] = useState<{ lat: number; lng: number }>({
-    lat: 0,
-    lng: 0,
-  });
+type LatLng = { lat: number; lng: number };
+type LocationWatcherOptions = {
+  requestId?: string | null;
+  customerId?: string | null;
+};
+
+function useLocationWatcher(options: LocationWatcherOptions) {
+  const { requestId, customerId } = options;
+  const [location, setLocation] = useState<LatLng | null>(null);
 
   useEffect(() => {
+    if (!requestId || !customerId) {
+      return;
+    }
+
     if (!("geolocation" in navigator)) {
       console.error("Geolocation not supported");
       return;
     }
+
     const watchId = navigator.geolocation.watchPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
-        
+
         setLocation({ lat: latitude, lng: longitude });
         try {
-          await axios.patch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/location`, {
+          await locationApi.patch("/api/location", {
             lat: latitude,
             lng: longitude,
-            customerId: "cus_003",
-            requestId: "68e350f894c77c1f8bab2710",
+            customerId,
+            requestId,
           });
         } catch (err) {
-          console.error("POST /api/locations failed:", err);
+          console.error("PATCH /api/location failed:", err);
         }
       },
       (err) => {
@@ -36,7 +45,8 @@ function useLocationWatcher() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  }, [requestId, customerId]);
+
   return location;
 }
 

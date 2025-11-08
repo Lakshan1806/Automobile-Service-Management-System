@@ -9,7 +9,7 @@ public class TokenProperties {
     /**
      * Issuer claim (`iss`) that appears in the issued access tokens.
      */
-    private String issuer = "http://localhost:8080";
+    private String issuer = "http://localhost:9000";
 
     /**
      * Audience claim (`aud`) that every resource server validates.

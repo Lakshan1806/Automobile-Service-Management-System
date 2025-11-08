@@ -8,13 +8,13 @@ import {
 } from "@vis.gl/react-google-maps";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { locationApi } from "@/app/auth/api";
 
 type LatLng = { lat: number; lng: number };
 
 async function fetchRoute(origin: LatLng, destination: LatLng) {
-  const response = await axios.post(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/route`,
+  const response = await locationApi.post(
+    "/api/route",
     {
       origin,
       destination,
@@ -40,21 +40,43 @@ function PolylineOverlay({ path }: { path: LatLng[] | null }) {
   return null;
 }
 
-function LocationMap({
-  currentLocation: { lat: userLat, lng: userLng },
-  technicianLocation: { lat: techLat, lng: techLng },
-}: {
+type LocationMapProps = {
   currentLocation: LatLng;
-  technicianLocation: LatLng;
-}) {
+  technicianLocation?: LatLng | null;
+};
+
+function LocationMap({
+  currentLocation,
+  technicianLocation,
+}: LocationMapProps) {
+  const { lat: userLat, lng: userLng } = currentLocation;
+  const techLat = technicianLocation?.lat ?? null;
+  const techLng = technicianLocation?.lng ?? null;
+  const hasTechnicianLocation =
+    techLat !== null &&
+    techLng !== null &&
+    Number.isFinite(techLat) &&
+    Number.isFinite(techLng);
+
   const [path, setPath] = useState<LatLng[] | null>(null);
 
   const center = useMemo<LatLng>(
-    () => ({ lat: (userLat + techLat) / 2, lng: (userLng + techLng) / 2 }),
-    [userLat, userLng, techLat, techLng],
+    () =>
+      hasTechnicianLocation
+        ? {
+            lat: (userLat + techLat) / 2,
+            lng: (userLng + techLng) / 2,
+          }
+        : { lat: userLat, lng: userLng },
+    [hasTechnicianLocation, userLat, userLng, techLat, techLng],
   );
 
   useEffect(() => {
+    if (!hasTechnicianLocation || techLat === null || techLng === null) {
+      setPath(null);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
@@ -81,7 +103,7 @@ function LocationMap({
     return () => {
       cancelled = true;
     };
-  }, [userLat, userLng, techLat, techLng]);
+  }, [hasTechnicianLocation, techLat, techLng, userLat, userLng]);
 
   return (
     <APIProvider
@@ -104,14 +126,16 @@ function LocationMap({
             height={64}
           />
         </AdvancedMarker>
-        <AdvancedMarker position={{ lat: techLat, lng: techLng }}>
-          <Image
-            src="/assets/tow-vehicle.png"
-            alt="Tow Vehicle"
-            width={64}
-            height={64}
-          />
-        </AdvancedMarker>
+        {hasTechnicianLocation && techLat !== null && techLng !== null && (
+          <AdvancedMarker position={{ lat: techLat, lng: techLng }}>
+            <Image
+              src="/assets/tow-vehicle.png"
+              alt="Tow Vehicle"
+              width={64}
+              height={64}
+            />
+          </AdvancedMarker>
+        )}
 
         <PolylineOverlay path={path} />
       </Map>
