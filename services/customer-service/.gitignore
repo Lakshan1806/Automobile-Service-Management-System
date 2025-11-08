@@ -1,0 +1,22 @@
+# Build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+
+# Local configuration overrides
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+*.secrets.json
+
+# Build caches
+project.nuget.cache
+*.nuget.dgspec.json
+
+# Miscellaneous transient files
+*.log
+*.http.user

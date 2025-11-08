@@ -1,3 +1,17 @@
 /.vs/
 /mock-back/
 .DS_Store
+
+# Customer-service local artifacts
+services/customer-service/bin/
+services/customer-service/obj/
+services/customer-service/*.user
+services/customer-service/*.rsuser
+services/customer-service/*.suo
+services/customer-service/appsettings.Development.json
+services/customer-service/appsettings.Local.json
+services/customer-service/appsettings.*.local.json
+
+# Crash logs from local test runs
+hs_err_pid*.log
+replay_pid*.log
