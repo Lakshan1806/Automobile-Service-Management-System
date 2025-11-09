@@ -1,0 +1,12 @@
+services:
+  location-service:
+    build:
+      context: ./services/location-service
+    container_name: location-service
+    ports:
+      - "5000:5000"  
+    env_file:
+      - ./services/location-service/.env
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
