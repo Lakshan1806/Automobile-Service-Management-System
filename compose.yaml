@@ -10,3 +10,15 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./services/user-service
+    container_name: user-service
+    ports:
+      - "5001:5001"  
+    env_file:
+      - ./services/user-service/.env
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
