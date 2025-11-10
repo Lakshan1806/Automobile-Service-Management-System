@@ -4,7 +4,7 @@ import axios from 'axios';
 import Appointment from '../models/Appointment.js';
 import Technician from '../models/Technician.js';
 
-const EXTERNAL_SERVICE_URL = 'http://localhost:5000';
+const EXTERNAL_SERVICE_URL = 'http://localhost:8080';
 
 /**
  * Sync appointments from external service to local database
@@ -12,7 +12,7 @@ const EXTERNAL_SERVICE_URL = 'http://localhost:5000';
 export async function syncAppointments() {
   try {
     console.log('Fetching appointments from external service...');
-    const response = await axios.get(`${EXTERNAL_SERVICE_URL}/api/appointments/new`);
+    const response = await axios.get(`${EXTERNAL_SERVICE_URL}/manager/internal/appointments/all`);
     let appointments = [];
 
     // Handle both array and single object responses
@@ -293,7 +293,7 @@ export async function getFinishedAppointments(req, res) {
  */
 export async function getNewAppointments(req, res) {
   try {
-    const response = await axios.get(`${EXTERNAL_SERVICE_URL}/api/appointments/new`);
+    const response = await axios.get(`${EXTERNAL_SERVICE_URL}/manager/internal/appointments/all`);
     res.json(response.data);
   } catch (error) {
     console.error('Error fetching new appointments:', error.message);
