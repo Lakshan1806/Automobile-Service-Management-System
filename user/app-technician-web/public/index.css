@@ -1,18 +1,18 @@
-/* NovaDrive dark theme variables and utility overrides for technician app */
+/* NovaDrive light theme variables and utility overrides for technician app */
 
 :root {
-  --background: #04070f;
-  --foreground: #f9fafb;
+  --background: #f8fafc;
+  --foreground: #0f172a;
   --primary: #3b82f6;
   --primary-dark: #1d4ed8;
-  --surface: rgba(8, 13, 26, 0.85);
-  --surface-alt: #0f172a;
-  --border: rgba(148, 163, 184, 0.25);
+  --surface: #ffffff;
+  --surface-alt: #f1f5f9;
+  --border: rgba(15, 23, 42, 0.08);
   --radius: 1rem;
   --gap: 1.5rem;
-  --text-dim: #94a3b8;
+  --text-dim: #475569;
   --danger: #ef4444;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -21,9 +21,9 @@ body {
   margin: 0;
   background: radial-gradient(
     circle at top right,
-    #1f2937 0%,
-    #030712 55%,
-    #020617 100%
+    #ffffff 0%,
+    #f7fafc 55%,
+    #eef2f7 100%
   );
   color: var(--foreground);
   font-family:
@@ -43,12 +43,12 @@ body {
 /* Containers */
 .container { width: min(1100px, 92vw); margin: 0 auto; }
 
-/* Subtle glass surface for cards that used bg-white */
+/* Surfaces */
 .bg-white { background: var(--surface) !important; color: var(--foreground) !important; }
-.bg-gray-50 { background: var(--surface) !important; }
-.bg-gray-100 { background: transparent !important; }
+.bg-gray-50 { background: var(--surface-alt) !important; }
+.bg-gray-100 { background: var(--surface-alt) !important; }
 
-/* Text remaps to dark theme palette */
+/* Text remaps to light theme palette */
 .text-gray-900, .text-gray-800 { color: var(--foreground) !important; }
 .text-gray-700, .text-gray-600, .text-gray-500, .text-gray-400, .text-gray-300 { color: var(--text-dim) !important; }
 
@@ -62,22 +62,22 @@ body {
 .bg-brand-blue-dark { background: linear-gradient(135deg, var(--primary-dark), #0ea5e9) !important; }
 .hover\:bg-brand-blue-dark:hover { background: linear-gradient(135deg, var(--primary-dark), #0ea5e9) !important; }
 
-/* Legacy gold accents → subtle highlight to fit dark theme */
-.text-brand-gold { color: var(--foreground) !important; }
-.bg-brand-gold { background: rgba(59, 130, 246, 0.12) !important; }
-.bg-brand-gold-dark { background: rgba(59, 130, 246, 0.2) !important; }
+/* Legacy gold accents → soften for light theme */
+.text-brand-gold { color: #b45309 !important; }
+.bg-brand-gold { background: rgba(250, 204, 21, 0.18) !important; }
+.bg-brand-gold-dark { background: rgba(250, 204, 21, 0.28) !important; }
 
 /* Focus rings using primary */
 .focus\:ring-brand-blue:focus { --tw-ring-color: var(--primary) !important; }
 .focus\:border-brand-blue:focus { border-color: var(--primary) !important; }
 
-/* Nav/Sidebar common tints (used by active states below) */
+/* Nav/Sidebar tints for light theme */
 .nv-active { background: rgba(59, 130, 246, 0.12) !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
-.nv-hover { background: rgba(148, 163, 184, 0.12) !important; }
+.nv-hover { background: rgba(15, 23, 42, 0.04) !important; }
 
-/* Header baseline look for light-to-dark transition */
-header.site-header { 
-  background: rgba(8, 12, 24, 0.9);
+/* Header baseline look for light theme */
+header.site-header {
+  background: rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
 }

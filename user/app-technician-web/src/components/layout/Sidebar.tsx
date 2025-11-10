@@ -73,8 +73,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         onClick={() => setIsOpen(false)}
       ></div>
 
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-[rgba(8,12,24,0.95)] text-[var(--foreground)] transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:flex-col border-r border-[var(--border)]`}>
-        <div className="flex items-center justify-between h-20 px-4 border-b border-[var(--border)]">
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white text-[var(--foreground)] transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:flex-col border-r border-[var(--border)]`}>
+        <div className="flex items-center justify-between h-20 px-4 border-b border-[var(--border)] bg-white/90">
             <div className="flex items-center">
                 <WrenchScrewdriverIcon className="h-8 w-8 text-[var(--primary)]"/>
                 <span className="text-2xl font-bold ml-2">AutoPro</span>
