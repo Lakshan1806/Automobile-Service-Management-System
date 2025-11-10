@@ -8,6 +8,7 @@ const WorklogSchema = new mongoose.Schema({
   durationMinutes: { type: Number },
   notes: { type: String },
   createdAt: { type: Date, default: Date.now },
+  parts:{type:String}
 });
 
 WorklogSchema.pre("save", function (next) {
