@@ -10,7 +10,7 @@ class BillItemAdmin(admin.ModelAdmin):
 
     def get_total(self, obj):
         """Display total price for the item"""
-        return f"${obj.price * obj.quantity:.2f}"
+        return f"{obj.price * obj.quantity:.2f}"
     get_total.short_description = 'Total'
 
 

@@ -6,10 +6,14 @@ from .views import (
     GenerateBillView,
     SendBillEmailView,
     GetBillView,
-    SendBillNotificationView
+    SendBillNotificationView,
+    SendNotificationView  # New unified notification endpoint
 )
 
 urlpatterns = [
+    # Unified Notification Service (NEW)
+    path('send/', SendNotificationView.as_view(), name='send_notification'),
+
     # OTP Services
     path('otp/generate/', GenerateOTPView.as_view(), name='generate_otp'),
     path('otp/send-email/', SendOTPEmailView.as_view(), name='send_otp_email'),

@@ -118,9 +118,9 @@ class BillService:
             subtotal = float(item.price) * item.quantity
             items_data.append([
                 Paragraph(item.name, styles['Normal']),
-                f"${float(item.price):.2f}",
+                f"{float(item.price):.2f}",
                 str(item.quantity),
-                f"${subtotal:.2f}"
+                f"{subtotal:.2f}"
             ])
 
         # Add total row
@@ -128,7 +128,7 @@ class BillService:
             Paragraph('<b>Total</b>', styles['Normal']),
             '',
             '',
-            Paragraph(f"<b>${float(bill.total_price):.2f}</b>",
+            Paragraph(f"<b>{float(bill.total_price):.2f}</b>",
                       styles['Normal'])
         ])
 
