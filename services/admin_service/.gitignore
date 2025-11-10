@@ -9,7 +9,3 @@ enterprise/
 # Pytest
 .cache/
 .pytest_cache/
-
-.dockerignore
-Dockerfile
-docker-compose.yml

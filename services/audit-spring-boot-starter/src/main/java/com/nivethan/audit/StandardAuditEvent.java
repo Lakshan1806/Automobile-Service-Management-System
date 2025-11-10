@@ -14,19 +14,27 @@ public class StandardAuditEvent {
 
     @Builder.Default
     private String eventId = UUID.randomUUID().toString();
+    
+    // This will be set by the producer
+    private String serviceName; 
 
-    // Set Service Name dynamically!
-    private String serviceName;
-
-    private String eventName; // "APPOINTMENT_CREATED", "USER_LOGGED_IN", "PAYMENT_FAILED"
-    private String status;    // "SUCCESS", "FAILURE", "INFO"
-
+    private String eventName; // "APPOINTMENT_CREATED", "USER_LOGGED_IN", etc.
+    private String status;    // "SUCCESS", "FAILURE", or "INFO"
+    
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
 
-    // The "dynamic" part.
+    // This is the dynamic part where we can put anything
     private Map<String, Object> payload;
+    
+    private String traceId; // To link events from one request
+    private ErrorPayload error;
 
-    private String traceId; // To link multiple events from one request
-    private String errorMessage;
+    // A small helper class for errors
+    @Data
+    @Builder
+    public static class ErrorPayload {
+        private String code;
+        private String message;
+    }
 }

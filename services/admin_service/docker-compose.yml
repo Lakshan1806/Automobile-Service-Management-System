@@ -1,0 +1,35 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: admin-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "3308:3306"
+    volumes:
+      - admin_mysql_data:/var/lib/mysql
+
+  web:
+    build: .
+    container_name: admin-service
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      # Override DB host/port to reach MySQL container
+      DB_HOST: db
+      DB_PORT: 3306
+      ALLOWED_HOSTS: "*"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+      - admin_media:/app/media
+
+volumes:
+  admin_mysql_data:
+  admin_media:
+
