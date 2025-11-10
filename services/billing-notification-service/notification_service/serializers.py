@@ -157,3 +157,35 @@ class BillNotificationSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Either 'email' or 'customer_email' is required")
         return data
+
+
+class SendNotificationSerializer(serializers.Serializer):
+    """Unified serializer for sending any notification"""
+    to = serializers.EmailField(
+        required=True,
+        help_text="Recipient email address"
+    )
+    subject = serializers.CharField(
+        required=True,
+        max_length=200,
+        help_text="Email subject line"
+    )
+    body = serializers.CharField(
+        required=True,
+        help_text="Email body content (plain text or HTML)"
+    )
+    is_html = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Whether body contains HTML"
+    )
+    bill_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text="Bill ID to generate and attach PDF invoice (optional)"
+    )
+    attach_invoice = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Whether to generate and attach PDF invoice (requires bill_id)"
+    )
