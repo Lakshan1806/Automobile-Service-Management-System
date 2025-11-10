@@ -5,7 +5,7 @@ import json
 
 async def main():
     consumer = AIOKafkaConsumer(
-        "appointment_events", "prediction_events", # Subscribes to BOTH topics!
+        "business_audit_events", # <-- THE ONLY TOPIC YOU NEED TO LISTEN TO!
         bootstrap_servers="localhost:9092",
         group_id="live-dashboard-group-1", 
         auto_offset_reset="latest" 
@@ -18,14 +18,21 @@ async def main():
     try:
         async for msg in consumer:
             print("\n" + "="*20 + " NEW EVENT " + "="*20)
-            print(f"Topic: {msg.topic}") # See which service sent it
+            print(f"Topic: {msg.topic}") # This will always be 'business_audit_events'
             
             try:
                 data = json.loads(msg.value.decode('utf-8'))
-                print(json.dumps(data, indent=2))
+                
+                # We can now print the service name from inside the message!
+                print(f"Service: {data.get('serviceName')}") 
+                print(f"Event:   {data.get('eventName')}")
+                print(f"Status:  {data.get('status')}")
+                
+                print(json.dumps(data.get('payload'), indent=2))
+                
             except Exception as e:
                 print(f"Raw data: {msg.value}")
-                
+    
     finally:
         await consumer.stop()
         print("Live Monitor stopped.")

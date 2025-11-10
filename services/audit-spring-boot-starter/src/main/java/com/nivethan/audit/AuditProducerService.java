@@ -23,27 +23,28 @@ public class AuditProducerService {
     private final KafkaTemplate<String, StandardAuditEvent> kafkaTemplate;
 
     // 3. We make the topic configurable from application.properties
-    @Value("${nivethan.audit.topic:audit_events}") // Default to "audit_events"
-    private String topic;
+    // --- THIS IS THE KEY ---
+    // All services will send to this ONE topic
+    private static final String AUDIT_TOPIC = "business_audit_events";
 
     // 4. New "send" method.Other services will use
-    public void sendEvent(String eventName, String status, String traceId, Map<String, Object> payload, String errorMessage) {
-
-        // Build the standard event, dynamically adding the service name
+    public void sendEvent(String eventName, String status, String traceId, Map<String, Object> payload, StandardAuditEvent.ErrorPayload error) {
+        
         StandardAuditEvent event = StandardAuditEvent.builder()
-                .serviceName(this.serviceName)
+                .serviceName(this.serviceName) // "appointment-service"
                 .eventName(eventName)
                 .status(status)
                 .traceId(traceId)
                 .payload(payload)
-                .errorMessage(errorMessage)
+                .error(error)
                 .build();
-
+        
         try {
-            log.info("Sending audit event: {} from service: {}", event.getEventName(), event.getServiceName());
-            kafkaTemplate.send(topic, event.getServiceName(), event);
+            log.info("Sending audit event: {}", event.getEventName());
+            // Send to the single, standard topic
+            kafkaTemplate.send(AUDIT_TOPIC, event.getServiceName(), event);
         } catch (Exception e) {
-            log.error("Failed to send audit event to Kafka, but continuing operation.", e);
+            log.error("Failed to send audit event to Kafka", e);
         }
     }
 
@@ -52,7 +53,10 @@ public class AuditProducerService {
         sendEvent(eventName, "SUCCESS", traceId, payload, null);
     }
 
-    public void sendFailureEvent(String eventName, String traceId, Map<String, Object> payload, String error) {
+    public void sendFailureEvent(String eventName, String traceId, Map<String, Object> payload, String errorMessage) {
+        StandardAuditEvent.ErrorPayload error = StandardAuditEvent.ErrorPayload.builder()
+                .message(errorMessage)
+                .build();
         sendEvent(eventName, "FAILURE", traceId, payload, error);
     }
 }
