@@ -8,7 +8,8 @@ load_dotenv()
 class Settings:
     # --- ADD THESE ---
     KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-    PREDICTION_EVENTS_TOPIC: str = "prediction_events"
+    # PREDICTION_EVENTS_TOPIC: str = "prediction_events" # <-- DELETE THIS
+    AUDIT_TOPIC: str = "business_audit_events"      # <-- ADD THIS
 
     # FastAPI Configuration
     HOST: str = os.getenv("HOST", "0.0.0.0")

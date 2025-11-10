@@ -6,7 +6,9 @@ from typing import Optional, List, Dict, Any
 import joblib
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+# --- THIS LINE IS MODIFIED ---
+from datetime import datetime, timedelta, timezone # <-- We added timezone
+# ---
 import httpx
 import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -14,9 +16,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import settings
 from training import EnhancedVehicleRepairModel, train_enhanced_model
 
+# --- Kafka Imports ---
 from aiokafka import AIOKafkaProducer
 import json
-
+import uuid # <-- ADD THIS IMPORT
+# ---
 
 app = FastAPI(
     title="Enhanced Vehicle Scheduling Prediction API",
@@ -35,27 +39,23 @@ model_handler = EnhancedVehicleRepairModel()
 # Global producer
 kafka_producer = None
 
-async def send_prediction_event(event: "PredictionEvent"):
+# THIS FUNCTION IS RENAMED and UPDATED
+async def send_audit_event(event: "StandardAuditEvent"):
     """
-    Sends a prediction event to Kafka.
-    This is a true 'fire-and-forget' operation and will not block.
+    Sends a standard audit event to Kafka.
     """
     global kafka_producer
-    
-    
     if kafka_producer is None:
         print("ERROR: Kafka producer is not running. Skipping event.")
-        return  
+        return
         
     try:
-        # send() instead of send_and_wait()
-        # This will not block the API request.
         await kafka_producer.send(
-            settings.PREDICTION_EVENTS_TOPIC,
-            key=event.vehicleType.encode('utf-8'),
+            settings.AUDIT_TOPIC, # <-- Make sure AUDIT_TOPIC="business_audit_events" is in config.py
+            key=event.serviceName.encode('utf-8'),
             value=event.json().encode('utf-8')
         )
-        print(f"Sent audit event: {event.eventType}")
+        print(f"Sent audit event: {event.eventName}")
     except Exception as e:
         print(f"CRITICAL: Could not send prediction event to Kafka: {e}")
 
@@ -105,18 +105,24 @@ class ConfigurationResponse(BaseModel):
     repair_requirements: Dict[str, Dict[str, int]]
     model_features: List[str]
 
-class PredictionEvent(BaseModel):
-    eventType: str # "PREDICTION_REQUESTED", "PREDICTION_CALCULATED", "PREDICTION_FAILED"
-    vehicleType: str
-    repairType: str
-    predictedDuration: Optional[int] = None
-    confidence: Optional[float] = None
-    errorMessage: Optional[str] = None
-    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+# --- THIS IS THE NEW STANDARD DTO ---
+class StandardAuditEvent(BaseModel):
+    eventId: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    serviceName: str = "prediction-service" # Hard-code the service name
+    eventName: str
+    
+    # --- THIS LINE IS MODIFIED ---
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # ---
+    
+    status: str # "SUCCESS", "FAILURE", "INFO"
+    traceId: Optional[str] = None
+    payload: Optional[Dict[str, Any]] = None
+    error: Optional[Dict[str, Any]] = None
 
 
 # --- Enhanced Prediction Functions ---
-
+# (Your original functions are perfect, no changes needed here)
 def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
     """Creates features for prediction from request data."""
     
@@ -374,6 +380,10 @@ async def shutdown_event():
         await kafka_producer.stop()
         print("Kafka producer stopped.")
 
+# ---
+# --- END OF MODIFIED Startup/Shutdown
+# ---
+
 
 # --- API Endpoints ---
 
@@ -411,12 +421,16 @@ async def predict_enhanced_duration(request: EnhancedRepairRequest):
 async def suggest_enhanced_start_date(request: EnhancedRepairRequest):
     """Enhanced scheduling with comprehensive prediction."""
     
-    # This call is now non-blocking, it will not hang
-    await send_prediction_event(
-        PredictionEvent(
-            eventType="PREDICTION_REQUESTED",
-            vehicleType=request.vehicleType,
-            repairType=request.repairType
+    # Create a traceId. In a real system, you'd get this from the request header
+    trace_id = str(uuid.uuid4())
+    
+    # --- THIS LOGIC IS UPDATED ---
+    await send_audit_event(
+        StandardAuditEvent(
+            eventName="PREDICTION_REQUESTED",
+            status="INFO",
+            traceId=trace_id,
+            payload=request.dict()
         )
     )
 
@@ -516,34 +530,35 @@ async def suggest_enhanced_start_date(request: EnhancedRepairRequest):
             
             if is_slot_available:
                 
-                # This call is also non-blocking
-                await send_prediction_event(
-                    PredictionEvent(
-                        eventType="PREDICTION_CALCULATED",
-                        vehicleType=request.vehicleType,
-                        repairType=request.repairType,
-                        predictedDuration=needed_duration,
-                        confidence=round(confidence, 2)
-                    )
-                )
-                
-                return ScheduleResponse(
+                response = ScheduleResponse(
                     suggestedStartDate=current_check_date.strftime('%Y-%m-%d'),
                     predictedDuration=needed_duration,
                     confidence=round(confidence, 2)
                 )
+
+                # --- THIS LOGIC IS UPDATED ---
+                await send_audit_event(
+                    StandardAuditEvent(
+                        eventName="PREDICTION_CALCULATED",
+                        status="SUCCESS",
+                        traceId=trace_id,
+                        payload=response.dict()
+                    )
+                )
+                return response
         
         # If the loop finishes without returning, no slot was found
         raise HTTPException(status_code=404, detail="No available slots found in the next 30 days")
 
     except Exception as e:
-        # This call is also non-blocking
-        await send_prediction_event(
-            PredictionEvent(
-                eventType="PREDICTION_FAILED",
-                vehicleType=request.vehicleType,
-                repairType=request.repairType,
-                errorMessage=str(e)
+        # --- THIS LOGIC IS UPDATED ---
+        await send_audit_event(
+            StandardAuditEvent(
+                eventName="PREDICTION_FAILED",
+                status="FAILURE",
+                traceId=trace_id,
+                payload=request.dict(),
+                error={"message": str(e)}
             )
         )
         # Re-raise the exception so the user gets the error
@@ -559,13 +574,13 @@ async def trigger_training(background_tasks: BackgroundTasks):
 async def get_model_info():
     """Get information about the current model."""
     if model_handler.model is None:
-        raise HTTPException(status_code=4.04, detail="No model loaded")
+        raise HTTPException(status_code=404, detail="No model loaded")
     
     return {
         "model_type": type(model_handler.model).__name__,
         "features_used": model_handler.feature_names if model_handler.feature_names else [],
         "preprocessor_available": model_handler.preprocessor is not None,
-        "training_date": "Unknown" # You could save this in the model artifact
+        "training_date": "Unknown" 
     }
 
 @app.post("/debug/prediction")
