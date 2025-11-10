@@ -9,3 +9,5 @@ enterprise/
 # Pytest
 .cache/
 .pytest_cache/
+
+pyvenv.cfg
