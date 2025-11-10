@@ -28,7 +28,41 @@ class BillSerializer(serializers.ModelSerializer):
 
 
 class BillCreateSerializer(serializers.Serializer):
-    """Serializer for creating a new bill"""
+    """Serializer for creating a new bill with service_id and product_ids"""
+    service_id = serializers.UUIDField(required=True)
+    customer_email = serializers.EmailField(required=True)
+    products = serializers.ListField(
+        child=serializers.DictField(),
+        required=True,
+        allow_empty=False,
+        help_text="List of products with product_id and quantity"
+    )
+
+    def validate_products(self, value):
+        """Validate products list"""
+        if not value:
+            raise serializers.ValidationError(
+                "At least one product is required")
+
+        for product in value:
+            if 'product_id' not in product or 'quantity' not in product:
+                raise serializers.ValidationError(
+                    "Each product must have 'product_id' and 'quantity'")
+
+            try:
+                int(product['quantity'])
+                if int(product['quantity']) < 1:
+                    raise serializers.ValidationError(
+                        "Quantity must be at least 1")
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    "Quantity must be a valid integer")
+
+        return value
+
+
+class BillCreateLegacySerializer(serializers.Serializer):
+    """Legacy serializer for creating a bill with manual items"""
     customer_email = serializers.EmailField(required=True)
     items = serializers.ListField(
         child=serializers.DictField(),

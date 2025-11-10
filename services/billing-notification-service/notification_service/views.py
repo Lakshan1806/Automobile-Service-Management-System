@@ -158,28 +158,107 @@ class SendOTPEmailView(APIView):
 
 
 class GenerateBillView(APIView):
-    """API view to generate bill with specified items"""
+    """API view to generate bill from service_id and product_ids"""
 
     def post(self, request):
         serializer = BillCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        service_id = serializer.validated_data['service_id']
         customer_email = serializer.validated_data['customer_email']
-        items = serializer.validated_data['items']
+        products = serializer.validated_data['products']
 
         try:
-            bill = BillService.generate_bill(customer_email, items)
+            # Import admin_service models
+            from admin_service.models import Service, Part
+
+            # Get service details
+            try:
+                service = Service.objects.get(id=service_id)
+                logger.info(
+                    f"[GENERATE-BILL] Found service: {service.service_number}")
+            except Service.DoesNotExist:
+                logger.error(
+                    f"[GENERATE-BILL] Service not found: {service_id}")
+                return Response({
+                    'error': 'Service not found',
+                    'service_id': str(service_id)
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Calculate bill
+            bill_items_data = []
+            total_amount = 0
+
+            # Add service cost
+            service_cost = float(
+                service.estimated_cost) if service.estimated_cost else 0
+            if service_cost > 0:
+                bill_items_data.append({
+                    'name': f'Service: {service.title}',
+                    'price': service_cost,
+                    'quantity': 1
+                })
+                total_amount += service_cost
+                logger.info(f"[GENERATE-BILL] Service cost: ${service_cost}")
+
+            # Add products/parts
+            for product in products:
+                product_id = product['product_id']
+                quantity = int(product['quantity'])
+
+                try:
+                    part = Part.objects.get(id=product_id)
+                    product_price = float(part.unit_price)
+                    product_total = product_price * quantity
+
+                    bill_items_data.append({
+                        'name': f'{part.name} ({part.part_number})',
+                        'price': product_price,
+                        'quantity': quantity
+                    })
+                    total_amount += product_total
+                    logger.info(
+                        f"[GENERATE-BILL] Product: {part.name} x{quantity} = ${product_total}")
+
+                except Part.DoesNotExist:
+                    logger.warning(
+                        f"[GENERATE-BILL] Product not found: {product_id}")
+                    return Response({
+                        'error': 'Product not found',
+                        'product_id': str(product_id)
+                    }, status=status.HTTP_404_NOT_FOUND)
+
+            # Create bill
+            bill = Bill.objects.create(
+                customer_email=customer_email,
+                total_price=total_amount
+            )
+
+            # Create bill items
+            for item_data in bill_items_data:
+                bill_item = BillItem.objects.create(
+                    name=item_data['name'],
+                    price=item_data['price'],
+                    quantity=item_data['quantity']
+                )
+                bill.items.add(bill_item)
+
+            logger.info(
+                f"[GENERATE-BILL] Bill created: {bill.bill_id}, Total: ${total_amount}")
 
             return Response({
                 'success': True,
                 'message': 'Bill generated successfully',
                 'bill_id': str(bill.bill_id),
-                'total_price': str(bill.total_price),
+                'service_number': service.service_number,
+                'total_price': str(total_amount),
+                'items': bill_items_data,
                 'created_at': bill.created_at.isoformat()
             }, status=status.HTTP_201_CREATED)
+
         except Exception as e:
-            logger.error(f"Error generating bill: {e}")
+            logger.error(f"[GENERATE-BILL] Error generating bill: {e}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
