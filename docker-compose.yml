@@ -19,7 +19,7 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
-
+  
   # --- 3. Kafka ---
   kafka:
     image: apache/kafka:4.1.0
@@ -40,7 +40,7 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
 
-  # --- 4. Auth Service (Spring) ---
+  # --- 4. Auth Service (Spring Boot) ---
   auth-service:
     build: ./services/authentication-service
     ports:
@@ -80,7 +80,7 @@ services:
       - kafka
       - user-service
 
-  # --- 7. Appointment Service (Spring) ---
+  # --- 7. Appointment Service (Spring Boot) ---
   appointment-service:
     build:
       context: .
@@ -95,7 +95,18 @@ services:
       - prediction-service
       - user-service
       - kafka
-  
+
+  # --- 8. Location Service (Node.js) ---
+  location-service:
+    build:
+      context: ./services/location-service
+    ports:
+      - "5000:5000"  
+    env_file:
+      - ./services/location-service/.env
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
   # --- We are NOT running the frontend in Docker ---
 
 volumes:
