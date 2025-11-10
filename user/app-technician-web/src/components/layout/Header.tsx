@@ -17,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-solid border-[var(--border)] flex items-center justify-between h-16 px-4 sm:px-6 text-[var(--foreground)] flex-shrink-0">
+    <header className="site-header sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-solid border-[var(--border)] flex items-center justify-between h-16 px-4 sm:px-6 text-[var(--foreground)] flex-shrink-0">
       <div className="flex items-center">
         <button
             onClick={onMenuClick}

@@ -8,6 +8,12 @@
   --surface: #ffffff;
   --surface-alt: #f1f5f9;
   --border: rgba(15, 23, 42, 0.08);
+  --accent: #f59e0b; /* amber */
+  --accent-600: #d97706;
+  --sidebar-from: #163a6b; /* deep navy */
+  --sidebar-to: #0f2a59;   /* darker navy */
+  --sidebar-fg: #ecf2f8;
+  --sidebar-fg-dim: rgba(236, 242, 248, 0.8);
   --radius: 1rem;
   --gap: 1.5rem;
   --text-dim: #475569;
@@ -48,6 +54,14 @@ body {
 .bg-gray-50 { background: var(--surface-alt) !important; }
 .bg-gray-100 { background: var(--surface-alt) !important; }
 
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 20px rgba(2, 6, 23, 0.06);
+}
+
 /* Text remaps to light theme palette */
 .text-gray-900, .text-gray-800 { color: var(--foreground) !important; }
 .text-gray-700, .text-gray-600, .text-gray-500, .text-gray-400, .text-gray-300 { color: var(--text-dim) !important; }
@@ -75,10 +89,36 @@ body {
 .nv-active { background: rgba(59, 130, 246, 0.12) !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
 .nv-hover { background: rgba(15, 23, 42, 0.04) !important; }
 
+/* Sidebar styling */
+.sidebar {
+  background: linear-gradient(180deg, var(--sidebar-from) 0%, var(--sidebar-to) 100%);
+  color: var(--sidebar-fg);
+}
+.sidebar a { color: var(--sidebar-fg-dim); }
+.sidebar a:hover { color: var(--sidebar-fg); }
+
+/* Active nav chip with accent rail */
+.nav-active {
+  color: var(--foreground) !important;
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 12px rgba(2, 6, 23, 0.06) !important;
+  position: relative;
+}
+.nav-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--primary) 100%);
+}
+
 /* Header baseline look for light theme */
 header.site-header {
   background: rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
 }
-
