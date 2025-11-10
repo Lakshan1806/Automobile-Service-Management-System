@@ -68,7 +68,7 @@ class EmailService:
             <ul>
                 <li><strong>Bill ID:</strong> {bill.bill_id}</li>
                 <li><strong>Date:</strong> {bill.created_at.strftime('%Y-%m-%d')}</li>
-                <li><strong>Total Amount:</strong> ${bill.total_price}</li>
+                <li><strong>Total Amount:</strong> {bill.total_price}</li>
             </ul>
             <p>If you have any questions about this bill, please contact our customer service.</p>
         </body>

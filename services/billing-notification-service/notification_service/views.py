@@ -7,14 +7,15 @@ from django.utils import timezone
 import random
 import logging
 
-from .models import Bill, OTP
+from .models import Bill, BillItem, OTP
 from .serializers import (
     BillCreateSerializer,
     OTPGenerateSerializer,
     OTPVerifySerializer,
     SendEmailSerializer,
     SendBillEmailSerializer,
-    BillNotificationSerializer
+    BillNotificationSerializer,
+    SendNotificationSerializer  # New unified serializer
 )
 from .utils import OTPService, BillService, EmailService
 
@@ -200,7 +201,7 @@ class GenerateBillView(APIView):
                     'quantity': 1
                 })
                 total_amount += service_cost
-                logger.info(f"[GENERATE-BILL] Service cost: ${service_cost}")
+                logger.info(f"[GENERATE-BILL] Service cost: {service_cost}")
 
             # Add products/parts
             for product in products:
@@ -219,7 +220,7 @@ class GenerateBillView(APIView):
                     })
                     total_amount += product_total
                     logger.info(
-                        f"[GENERATE-BILL] Product: {part.name} x{quantity} = ${product_total}")
+                        f"[GENERATE-BILL] Product: {part.name} x{quantity} = {product_total}")
 
                 except Part.DoesNotExist:
                     logger.warning(
@@ -245,7 +246,7 @@ class GenerateBillView(APIView):
                 bill.items.add(bill_item)
 
             logger.info(
-                f"[GENERATE-BILL] Bill created: {bill.bill_id}, Total: ${total_amount}")
+                f"[GENERATE-BILL] Bill created: {bill.bill_id}, Total: {total_amount}")
 
             return Response({
                 'success': True,
@@ -421,13 +422,13 @@ class SendBillNotificationView(APIView):
                     price = item.get('price', 0)
                     quantity = item.get('quantity', 1)
                     subtotal = item.get('subtotal', price * quantity)
-                    items_summary += f"- {name}: ${price} x {quantity} = ${subtotal}\n"
+                    items_summary += f"- {name}: {price} x {quantity} = {subtotal}\n"
 
             subject = 'Your Automobile Service Bill Payment OTP'
             message = f"""
 Dear Customer,
 
-Your bill amount is ${bill_amount}.
+Your bill amount is {bill_amount}.
 {items_summary}
 Use this OTP to confirm your payment: {otp}
 
@@ -456,3 +457,152 @@ Thank you for choosing our service!
         except Exception as e:
             logger.error(f"Error sending bill notification: {str(e)}")
             return Response({'error': f'Failed to send OTP: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SendNotificationView(APIView):
+    """
+    Unified notification endpoint for sending emails with flexible content.
+
+    POST /api/notification/send/
+    Request body:
+    {
+        "to": "recipient@example.com",
+        "subject": "Email Subject",
+        "body": "Email content (text or HTML)",
+        "is_html": false,  // Optional, default false
+        "bill_id": "uuid-here",  // Optional, for invoice PDF
+        "attach_invoice": true  // Optional, generates and attaches PDF if bill_id provided
+    }
+    """
+
+    def post(self, request):
+        """
+        Send a notification email to specified recipient.
+        This unified endpoint replaces multiple specialized notification endpoints.
+        Supports optional PDF invoice attachment when bill_id and attach_invoice=true.
+        """
+        try:
+            # Validate request data
+            serializer = SendNotificationSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'error': 'Invalid request data',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Extract validated data
+            recipient = serializer.validated_data['to']
+            subject = serializer.validated_data['subject']
+            body = serializer.validated_data['body']
+            is_html = serializer.validated_data.get('is_html', False)
+            bill_id = serializer.validated_data.get('bill_id')
+            attach_invoice = serializer.validated_data.get(
+                'attach_invoice', False)
+
+            # Send email using Django's send_mail
+            from_email = settings.EMAIL_HOST_USER
+
+            # Check if PDF invoice should be attached
+            if attach_invoice and bill_id:
+                try:
+                    # Get the bill from database
+                    bill = Bill.objects.prefetch_related(
+                        'items').get(bill_id=bill_id)
+
+                    # Generate PDF in memory
+                    from .utils import BillService
+                    pdf_buffer = BillService.generate_bill_pdf(bill)
+
+                    # Send HTML email with PDF attachment
+                    from django.core.mail import EmailMultiAlternatives
+                    email = EmailMultiAlternatives(
+                        subject=subject,
+                        body=body,  # Plain text fallback
+                        from_email=from_email,
+                        to=[recipient]
+                    )
+
+                    if is_html:
+                        email.attach_alternative(body, "text/html")
+
+                    # Attach PDF
+                    email.attach(
+                        f'invoice_{bill_id}.pdf',
+                        pdf_buffer.getvalue(),
+                        'application/pdf'
+                    )
+
+                    email_sent = email.send()
+
+                    if email_sent:
+                        logger.info(
+                            f"Email with PDF invoice sent successfully to {recipient}")
+                        return Response({
+                            'success': True,
+                            'message': 'Email with invoice sent successfully',
+                            'to': recipient,
+                            'subject': subject,
+                            'invoice_attached': True,
+                            'bill_id': str(bill_id)
+                        }, status=status.HTTP_200_OK)
+                    else:
+                        logger.error(
+                            f"Failed to send email with invoice to {recipient}")
+                        return Response({
+                            'error': 'Failed to send email with invoice'
+                        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                except Bill.DoesNotExist:
+                    return Response({
+                        'error': f'Bill with ID {bill_id} not found'
+                    }, status=status.HTTP_404_NOT_FOUND)
+                except Exception as pdf_error:
+                    logger.error(
+                        f"Error generating or attaching PDF: {str(pdf_error)}")
+                    return Response({
+                        'error': 'Failed to generate or attach invoice PDF',
+                        'details': str(pdf_error)
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                # Regular email without PDF attachment
+                if is_html:
+                    # Send HTML email
+                    from django.core.mail import EmailMultiAlternatives
+                    email = EmailMultiAlternatives(
+                        subject=subject,
+                        body=body,  # Plain text fallback
+                        from_email=from_email,
+                        to=[recipient]
+                    )
+                    email.attach_alternative(body, "text/html")
+                    email_sent = email.send()
+                else:
+                    # Send plain text email
+                    email_sent = send_mail(
+                        subject=subject,
+                        message=body,
+                        from_email=from_email,
+                        recipient_list=[recipient],
+                        fail_silently=False
+                    )
+
+                if email_sent:
+                    logger.info(f"Email sent successfully to {recipient}")
+                    return Response({
+                        'success': True,
+                        'message': 'Email sent successfully',
+                        'to': recipient,
+                        'subject': subject
+                    }, status=status.HTTP_200_OK)
+                else:
+                    logger.error(f"Failed to send email to {recipient}")
+                    return Response({
+                        'error': 'Failed to send email'
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            logger.error(f"Error sending notification: {str(e)}")
+            return Response({
+                'error': 'Failed to send notification',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

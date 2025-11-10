@@ -9,7 +9,7 @@ class BillItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
 
     def __str__(self):
-        return f"{self.name} - ${self.price}"
+        return f"{self.name} - {self.price}"
 
 
 class Bill(models.Model):
@@ -23,7 +23,7 @@ class Bill(models.Model):
     pdf_path = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
-        return f"Bill {self.bill_id} - ${self.total_price}"
+        return f"Bill {self.bill_id} - {self.total_price}"
 
 
 class OTP(models.Model):

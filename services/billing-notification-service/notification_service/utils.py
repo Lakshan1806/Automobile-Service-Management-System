@@ -133,14 +133,14 @@ class BillService:
             subtotal = item.price * item.quantity
             items_data.append([
                 item.name,
-                f"${item.price:.2f}",
+                f"{item.price:.2f}",
                 str(item.quantity),
-                f"${subtotal:.2f}"
+                f"{subtotal:.2f}"
             ])
 
         # Add total row
         items_data.append(
-            ['', '', '<b>Total</b>', f"<b>${bill.total_price:.2f}</b>"])
+            ['', '', '<b>Total</b>', f"<b>{bill.total_price:.2f}</b>"])
 
         # Create table
         table = Table(items_data, colWidths=[200, 100, 100, 100])
@@ -206,7 +206,7 @@ Thank you for choosing our service. Your bill is attached.
 
 Bill Details:
 - Bill ID: {bill.bill_id}
-- Total Amount: ${bill.total_price:.2f}
+- Total Amount: {bill.total_price:.2f}
 - Date: {bill.created_at.strftime('%Y-%m-%d %H:%M:%S')}
 
 If you have any questions, please contact us.
