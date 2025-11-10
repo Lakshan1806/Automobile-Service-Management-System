@@ -66,43 +66,13 @@ console.log('Connection String:', process.env.MONGO_URI);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(async () => {
+  .then(() => {
     console.log('MongoDB connected successfully');
-
-    // Sync data from external services
-    try {
-      console.log('Starting initial data sync...');
-      
-      // Sync appointments and technicians in parallel
-      const [appointmentSync, technicianSync] = await Promise.all([
-        syncAppointments(),
-        syncTechnicians()
-      ]);
-
-      // Sync road assist data separately
-      console.log('\n--- Syncing Road Assist Data ---');
-      const roadAssistSync = await syncRoadAssistData();
-
-      console.log('\n--- Initial Sync Results ---');
-      console.log('Appointments:', appointmentSync.message);
-      console.log('Technicians:', technicianSync.message);
-      
-      // Log road assist sync result
-      if (roadAssistSync.success) {
-        console.log('Road Assist:', roadAssistSync.message);
-      } else {
-        console.error('Road Assist Sync Failed:', roadAssistSync.message);
-        if (roadAssistSync.error) {
-          console.error('Error details:', roadAssistSync.error);
-        }
-      }
-      
-      if (appointmentSync.failedCount > 0) console.log('Appointment sync warnings:', appointmentSync.errors);
-      if (technicianSync.failedCount > 0) console.log('Technician sync warnings:', technicianSync.errors);
-      console.log('--- End Sync Results ---\n');
-    } catch (error) {
-      console.error('Error during initial sync:', error.message);
-    }
+    console.log('Server started in normal mode. Data will persist between restarts.');
+    console.log('Use the following endpoints to manually sync data when needed:');
+    console.log('- GET /api/appointments/sync    - Sync appointments');
+    console.log('- GET /api/technicians/sync    - Sync technicians');
+    console.log('- GET /api/roadassists/sync    - Sync road assist data');
 
     // Start the Express server after initial sync
     const server = app.listen(PORT, () => {

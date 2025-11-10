@@ -18,6 +18,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/node": "^24.10.0",
     "nodemon": "^3.1.10"
   }
 }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import mongoose from 'mongoose';
 import RoadAssist from '../models/RoadAssist.js';
 
 const API_URL = 'http://localhost:5000/api/roadassist';
@@ -34,18 +35,50 @@ const saveRoadAssistData = async (data) => {
       return { success: true, message: 'No data to save', count: 0 };
     }
 
-    console.log(`Saving ${data.length} road assist records to database...`);
+    console.log(`Processing ${data.length} road assist records...`);
+
+    // Process each record
+    const processedData = data.map(item => {
+      // Create a new object with only the fields that exist in the schema
+      // and ensure required fields have values
+      return {
+        vehicleId: item.vehicleId || new mongoose.Types.ObjectId().toString(),
+        vehicleNo: item.vehicleNo || 'UNKNOWN',
+        customerId: item.customerId || new mongoose.Types.ObjectId().toString(),
+        customerName: item.customerName || 'Unknown Customer',
+        customerPhone: item.customerPhone || 'N/A',
+        currentLocation: item.currentLocation || 'Location not specified',
+        description: item.description || 'No description provided',
+        serviceType: item.serviceType || 'multi-service',
+        requestDate: item.requestDate || new Date(),
+        status: item.status || 'pending',
+        ...(item.assignedTechnician && { assignedTechnician: item.assignedTechnician }),
+        ...(item.notes && { notes: item.notes })
+      };
+    });
+
+    // Get all existing vehicleIds to prevent duplicates
+    const existingVehicleIds = (await RoadAssist.find({}, 'vehicleId')).map(doc => doc.vehicleId);
     
-    // Clear existing data
-    await RoadAssist.deleteMany({});
+    // Filter out records that already exist
+    const newRecords = processedData.filter(doc => !existingVehicleIds.includes(doc.vehicleId));
     
-    // Insert new data
-    const result = await RoadAssist.insertMany(data);
+    if (newRecords.length === 0) {
+      console.log('No new road assist records to add');
+      return {
+        success: true,
+        message: 'No new records to add',
+        count: 0
+      };
+    }
     
-    console.log(`Successfully saved ${result.length} road assist records`);
+    // Insert only new records
+    const result = await RoadAssist.insertMany(newRecords, { ordered: false });
+    
+    console.log(`Added ${result.length} new road assist records`);
     return {
       success: true,
-      message: `Successfully synced ${result.length} road assist records`,
+      message: `Added ${result.length} new road assist records`,
       count: result.length
     };
   } catch (error) {
@@ -66,13 +99,13 @@ const saveRoadAssistData = async (data) => {
 export const syncRoadAssistData = async () => {
   try {
     console.log('Starting road assist data sync...');
-    
+
     // Fetch data from external API
     const roadAssistData = await fetchRoadAssistData();
-    
+
     // Save data to database
     const result = await saveRoadAssistData(roadAssistData);
-    
+
     return result;
   } catch (error) {
     console.error('Error in syncRoadAssistData:', error.message);

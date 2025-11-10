@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import RoadAssist from '../models/RoadAssist.js';
+import Technician from '../models/Technician.js';
 import { syncRoadAssistData } from '../services/roadAssistService.js';
 
 /**
@@ -30,6 +32,90 @@ export const getRoadAssists = async (req, res) => {
  * @route GET /api/roadassists/sync
  * @returns {Object} Result of the sync operation
  */
+/**
+ * Assign a technician to a road assist appointment
+ * @route PUT /api/roadassists/:id/assign-technician
+ * @param {string} technicianId - ID of the technician to assign
+ * @param {string} technicianName - Name of the technician to assign
+ * @returns {Object} Updated road assist appointment and technician details
+ */
+export const assignTechnician = async (req, res) => {
+  try {
+    const { customId } = req.params;
+    const { technicianId } = req.body;
+
+    if (!technicianId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Technician ID is required'
+      });
+    }
+
+    // 1. Get technician details
+    const technician = await Technician.findOne({ technicianId });
+    if (!technician) {
+      return res.status(404).json({
+        success: false,
+        message: 'Technician not found'
+      });
+    }
+
+    // 2. Update RoadAssist document using customId
+    console.log('Looking up road assist with customId:', customId);
+    console.log('Technician ID to assign:', technicianId);
+    
+    const roadAssist = await RoadAssist.findOneAndUpdate(
+      { customId: customId.trim() },
+      {
+        assignedTechnician: technicianId,
+        assignedTechnicianName: `${technician.firstName} ${technician.lastName}`,
+        status: 'in-progress'
+      },
+      { new: true }
+    );
+    
+    if (!roadAssist) {
+      return res.status(404).json({
+        success: false,
+        message: 'Road assist appointment not found'
+      });
+    }
+
+    // 3. Update Technician document with road assist assignment
+    await Technician.findOneAndUpdate(
+      { technicianId },
+      {
+        $push: {
+          roadAssistAssignments: {
+            roadAssistId: customId,
+            status: 'assigned',
+            assignedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Technician assigned successfully',
+      data: {
+        roadAssist,
+        technician: {
+          technicianId: technician.technicianId,
+          name: `${technician.firstName} ${technician.lastName}`
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error assigning technician:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assign technician',
+      error: error.message
+    });
+  }
+};
+
 export const syncRoadAssists = async (req, res) => {
   try {
     const result = await syncRoadAssistData();
@@ -63,5 +149,6 @@ export const syncRoadAssists = async (req, res) => {
 
 export default {
   getRoadAssists,
-  syncRoadAssists
+  syncRoadAssists,
+  assignTechnician
 };

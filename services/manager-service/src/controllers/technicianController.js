@@ -3,6 +3,7 @@ import axios from 'axios';
 import mongoose from 'mongoose';
 import Technician from '../models/Technician.js';
 import Appointment from '../models/Appointment.js';
+import RoadAssist from '../models/RoadAssist.js';
 
 const EXTERNAL_SERVICE_URL = 'http://localhost:5000';
 
@@ -13,54 +14,47 @@ export const syncTechnicians = async () => {
   try {
     console.log('Syncing technicians from external service...');
     const response = await axios.get(`${EXTERNAL_SERVICE_URL}/api/technicians`);
-    const technicians = Array.isArray(response.data) ? response.data : [response.data];
+    let technicians = Array.isArray(response.data) ? response.data : [response.data];
+
+    console.log(`Found ${technicians.length} technicians to sync`);
+
+    // Process each technician to ensure required fields
+    const processedTechs = technicians.map(tech => ({
+      technicianId: tech.technicianId || tech.id || new mongoose.Types.ObjectId().toString(),
+      technicianName: tech.technicianName || tech.name || 'Unknown Technician',
+      phoneNumber: tech.phoneNumber || tech.phone || '',
+      email: tech.email || '',
+      // Preserve any other fields from the API
+      ...tech
+    }));
+
+    // Clear existing technicians
+    await Technician.deleteMany({});
     
-    const results = await Promise.allSettled(
-      technicians.map(async (tech) => {
-        try {
-          if (!tech || !tech.technicianId) {
-            return { success: false, error: 'Invalid technician data' };
-          }
-          
-          const technicianData = {
-            technicianId: tech.technicianId,
-            technicianName: tech.technicianName || 'Unnamed Technician',
-            phoneNumber: tech.phoneNumber || '',
-            status: tech.status || 'active',
-            // Preserve existing assignedTasks if any
-            $setOnInsert: { assignedTasks: [] }
-          };
-          
-          const result = await Technician.findOneAndUpdate(
-            { technicianId: tech.technicianId },
-            technicianData,
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-          );
-          
-          return { success: true, id: result._id };
-        } catch (error) {
-          console.error('Error processing technician:', error.message);
-          return { success: false, error: error.message, tech };
-        }
-      })
-    );
-    
-    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    const failedCount = results.length - successCount;
-    
-    console.log(`Technician sync completed. Success: ${successCount}, Failed: ${failedCount}`);
-    
+    // Insert all technicians
+    const result = await Technician.insertMany(processedTechs, { ordered: false });
+
+    console.log(`Successfully synced ${result.length} technicians`);
     return {
       success: true,
-      message: `Successfully synced ${successCount} technicians`,
-      successCount,
-      failedCount,
-      errors: results
-        .filter(r => r.status === 'fulfilled' && !r.value.success)
-        .map(r => r.value.error)
+      message: `Successfully synced ${result.length} technicians`,
+      count: result.length
     };
   } catch (error) {
     console.error('Error syncing technicians:', error.message);
+    
+    // If it's a bulk write error, some records might still have been inserted
+    if (error.writeErrors) {
+      const insertedCount = error.result?.nInserted || 0;
+      console.warn(`Partially synced: ${insertedCount} technicians were inserted before error`);
+      return {
+        success: false,
+        message: `Partially synced ${insertedCount} technicians`,
+        error: error.message,
+        insertedCount
+      };
+    }
+    
     return {
       success: false,
       message: 'Failed to sync technicians',
@@ -117,10 +111,120 @@ export const syncTechniciansRoute = async (req, res) => {
  * Get all technicians available for a specific appointment
  * Query params: appointmentId (required)
  */
+/**
+ * GET /api/technicians/available/roadassist/:customId
+ * Get all technicians available for a specific road assist assignment
+ * Uses the road assist's request date to check availability
+ * Query params: 
+ * - duration: (optional) Duration in hours (default: 2)
+ */
+export const getAvailableTechniciansForRoadAssist = async (req, res) => {
+  try {
+    const { customId } = req.params;
+    
+    // Find the road assist request by customId
+    const roadAssist = await RoadAssist.findOne({ customId });
+    
+    if (!roadAssist) {
+      return res.status(404).json({
+        success: false,
+        message: 'Road assist request not found'
+      });
+    }
+    
+    // Use the road assist's request date
+    const requestDate = roadAssist.requestDate || new Date();
+    const targetDate = new Date(requestDate);
+    
+    if (isNaN(targetDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Please use ISO format (e.g., 2023-11-07T10:00:00.000Z)'
+      });
+    }
+
+    // Normalize dates to compare only the date part (ignoring time)
+    const targetDateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Get all technicians (removed status filter)
+    const allTechs = await Technician.find({});
+    
+    const availableTechs = [];
+
+    for (const tech of allTechs) {
+      let isAvailable = true;
+      let reason = 'Available for road assist';
+
+      // Check assigned tasks for the same date
+      if (tech.assignedTasks && tech.assignedTasks.length > 0) {
+        for (const task of tech.assignedTasks) {
+          if (task.status === 'completed') continue;
+          
+          const taskDate = new Date(task.startDate).toISOString().split('T')[0];
+          
+          // Check if the task is on the same date
+          if (taskDate === targetDateStr) {
+            isAvailable = false;
+            reason = `Assigned to a task on ${taskDate}`;
+            break;
+          }
+        }
+      }
+
+      // Check road assist assignments if still available
+      if (isAvailable && tech.roadAssistAssignments && tech.roadAssistAssignments.length > 0) {
+        // Get all road assists for this technician
+        const roadAssistIds = tech.roadAssistAssignments.map(a => a.roadAssistId);
+        const roadAssists = await RoadAssist.find({ 
+          _id: { $in: roadAssistIds },
+          status: { $in: ['pending', 'in-progress'] }
+        });
+
+        // Check each road assist for same date
+        for (const ra of roadAssists) {
+          const raDateStr = new Date(ra.requestDate).toISOString().split('T')[0];
+          
+          if (raDateStr === targetDateStr) {
+            isAvailable = false;
+            reason = `Already assigned to a road assist on ${raDateStr}`;
+            break;
+          }
+        }
+      }
+
+      // Include technician details in the response
+      availableTechs.push({
+        technicianId: tech.technicianId,
+        technicianName: tech.technicianName,
+        available: isAvailable,
+        reason: reason
+      });
+    }
+
+    // Return array of available technicians with ID and name
+    const availableTechsList = availableTechs
+      .filter(tech => tech.available)
+      .map(tech => ({
+        id: tech.technicianId,
+        name: tech.technicianName
+      }));
+
+    return res.json(availableTechsList);
+
+  } catch (error) {
+    console.error('Error finding available technicians for road assist:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to find available technicians for road assist',
+      error: error.message
+    });
+  }
+};
+
 export const getAvailableTechnicians = async (req, res) => {
   try {
     const { appointmentId } = req.query;
-    
+
     if (!appointmentId) {
       return res.status(400).json({
         success: false,
@@ -160,7 +264,7 @@ export const getAvailableTechnicians = async (req, res) => {
     // 2. Get the appointment start date and duration
     const appointmentStart = new Date(appointment.suggested_started_date || new Date());
     const appointmentDuration = appointment.predicted_duration_date || 1; // Default to 1 day if not specified
-    
+
     // 3. Find all active technicians (excluding the currently assigned one if any)
     const allTechs = await Technician.find({
       status: 'active',
@@ -169,7 +273,7 @@ export const getAvailableTechnicians = async (req, res) => {
 
     // 4. For each technician, check their availability based on start date and duration
     const availableTechs = [];
-    
+
     for (const tech of allTechs) {
       // If no tasks, they're definitely available
       if (!tech.assignedTasks || tech.assignedTasks.length === 0) {
@@ -185,18 +289,18 @@ export const getAvailableTechnicians = async (req, res) => {
         });
         continue;
       }
-      
+
       // Check for any time conflicts with existing tasks
       let isAvailable = true;
       let conflictReason = '';
-      
+
       for (const task of tech.assignedTasks) {
         if (task.status === 'completed') continue;
-        
+
         const taskStart = new Date(task.startDate);
         const taskEnd = new Date(taskStart.getTime() + (task.workDuration || 1) * 24 * 60 * 60 * 1000);
         const appointmentEnd = new Date(appointmentStart.getTime() + appointmentDuration * 24 * 60 * 60 * 1000);
-        
+
         // Check for date overlap
         if (appointmentStart < taskEnd && appointmentEnd > taskStart) {
           isAvailable = false;
@@ -204,7 +308,7 @@ export const getAvailableTechnicians = async (req, res) => {
           break;
         }
       }
-      
+
       if (isAvailable) {
         availableTechs.push({
           _id: tech._id,
@@ -220,7 +324,7 @@ export const getAvailableTechnicians = async (req, res) => {
         console.log(`Technician ${tech.technicianName} is not available: ${conflictReason}`);
       }
     }
-    
+
     // If no available technicians, return all active technicians with their busy status
     if (availableTechs.length === 0) {
       const allActiveTechs = await Technician.find({ status: 'active' });
@@ -234,7 +338,7 @@ export const getAvailableTechnicians = async (req, res) => {
         reason: 'Fully booked',
         currentTasks: tech.assignedTasks?.length || 0
       }));
-      
+
       return res.json({
         success: true,
         count: 0,
@@ -243,7 +347,7 @@ export const getAvailableTechnicians = async (req, res) => {
         availableTechnicians: []
       });
     }
-    
+
     // Return available technicians
     return res.json({
       success: true,

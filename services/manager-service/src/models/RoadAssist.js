@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
 const roadAssistSchema = new mongoose.Schema({
+  customId: {
+    type: String,
+    required: true,
+    unique: true,
+    default: () => new mongoose.Types.ObjectId().toString()
+  },
   vehicleId: {
     type: String,
     required: true
@@ -34,7 +40,15 @@ const roadAssistSchema = new mongoose.Schema({
   serviceType: {
     type: String,
     required: true,
-    enum: ['towing', 'tire change', 'fuel delivery', 'jump start', 'lockout service', 'mechanical repair', 'multi-service'],
+    enum: [
+      'towing',
+      'tire change',
+      'fuel delivery',
+      'jump start',
+      'lockout service',
+      'mechanical repair',
+      'multi-service'
+    ],
     index: true
   },
   requestDate: {
@@ -42,7 +56,7 @@ const roadAssistSchema = new mongoose.Schema({
     default: Date.now,
     index: true
   },
-  // Additional fields for tracking
+  // ✅ Local-only fields (optional)
   status: {
     type: String,
     enum: ['pending', 'in-progress', 'completed'],
@@ -51,9 +65,13 @@ const roadAssistSchema = new mongoose.Schema({
   },
   assignedTechnician: {
     type: String,
-    ref: 'Technician'
+    ref: 'Technician',
+    required: false
   },
-  notes: String
+  notes: {
+    type: String,
+    required: false
+  }
 }, {
   timestamps: true
 });
