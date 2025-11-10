@@ -17,27 +17,27 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   };
 
   return (
-    <header className="flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b flex-shrink-0">
+    <header className="sticky top-0 z-20 bg-[rgba(8,12,24,0.9)] backdrop-blur-md border-b border-solid border-[var(--border)] flex items-center justify-between h-16 px-4 sm:px-6 text-[var(--foreground)] flex-shrink-0">
       <div className="flex items-center">
         <button
             onClick={onMenuClick}
-            className="lg:hidden mr-4 text-gray-600 hover:text-gray-800"
+            className="lg:hidden mr-4 text-[var(--text-dim)] hover:text-[var(--foreground)]"
             aria-label="Open sidebar"
         >
             <Bars3Icon className="h-6 w-6" />
         </button>
         <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-gray-800 truncate">Welcome, {user?.firstName}!</h1>
-            <p className="text-xs sm:text-sm text-gray-500">Role: {user?.role}</p>
+            <h1 className="text-lg sm:text-xl font-semibold truncate">Welcome, {user?.firstName}!</h1>
+            <p className="text-xs sm:text-sm text-[var(--text-dim)]">Role: {user?.role}</p>
         </div>
       </div>
       <div className="flex items-center">
         <div className="relative">
-          <UserCircleIcon className="w-8 h-8 text-gray-500" />
+          <UserCircleIcon className="w-8 h-8 text-[var(--text-dim)]" />
         </div>
         <button
           onClick={handleLogout}
-          className="ml-2 sm:ml-4 flex items-center text-sm text-gray-600 hover:text-brand-blue"
+          className="ml-2 sm:ml-4 flex items-center text-sm text-[var(--text-dim)] hover:text-[var(--foreground)]"
           title="Logout"
         >
           <ArrowLeftOnRectangleIcon className="w-6 h-6 mr-1" />
