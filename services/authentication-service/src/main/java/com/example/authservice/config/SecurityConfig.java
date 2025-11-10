@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/.well-known/jwks.json").permitAll()
                         .requestMatchers(
                                 "/api/customers/signup",
+                                "/api/customers/signup/**",
                                 "/api/customers/login",
                                 "/api/customers/logout",
                                 "/api/customers/me",

@@ -142,6 +142,19 @@ export interface Branch {
   status: 'ACTIVE' | 'INACTIVE';
 }
 
+export interface TechnicianAppointedWork {
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  label: string;
+}
+
+export interface TechnicianRoadAssistAssignment {
+  roadAssistId: string;
+  assignedAt: string;
+  status?: string;
+}
+
 export interface Technician {
   id: string;
   name: string;
@@ -149,7 +162,8 @@ export interface Technician {
   skills: string[];
   status: TechnicianStatus;
   todayLoad: number;
-  nextAvailable: string;
+  appointedWorks: TechnicianAppointedWork[];
+  roadAssistAssignments: TechnicianRoadAssistAssignment[];
   certifications: string[];
 }
 
@@ -241,6 +255,9 @@ export interface ServiceAppointment {
   vehicle: Vehicle;
   requestedServices: {id: string, name: string}[];
   preferredTime: string;
+  plannedStart: string | null;
+  plannedEnd: string | null;
+  durationDays: number;
   assignedTech: { id: string, name: string } | null;
   status: ServiceAppointmentStatus;
   notes: string;

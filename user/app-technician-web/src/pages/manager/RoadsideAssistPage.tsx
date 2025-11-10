@@ -3,12 +3,15 @@ import { managerService } from '../../services/api';
 import { RoadsideAppointment, PaginatedResponse, RoadsideAppointmentStatus } from '../../types';
 import StatusChip from '../../components/ui/StatusChip';
 import { MapPinIcon } from '@heroicons/react/24/outline';
+import AssignRoadsideTechnicianModal from './components/AssignRoadsideTechnicianModal';
 
 const RoadsideAssistPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'new' | 'active'>('new');
     const [appointmentsResponse, setAppointmentsResponse] = useState<PaginatedResponse<RoadsideAppointment> | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedAppointment, setSelectedAppointment] = useState<RoadsideAppointment | null>(null);
+    const [isAssignModalOpen, setAssignModalOpen] = useState(false);
 
     const fetchAppointments = useCallback(async () => {
         try {
@@ -28,6 +31,25 @@ const RoadsideAssistPage: React.FC = () => {
     useEffect(() => {
         fetchAppointments();
     }, [fetchAppointments]);
+
+    const openAssignModal = (appointment: RoadsideAppointment) => {
+        setSelectedAppointment(appointment);
+        setAssignModalOpen(true);
+    };
+
+    const handleAssignTechnician = async (technicianId: string) => {
+        if (!selectedAppointment) {
+            return;
+        }
+        try {
+            await managerService.assignRoadsideTechnician(selectedAppointment.ticketNo, technicianId);
+            setAssignModalOpen(false);
+            setSelectedAppointment(null);
+            fetchAppointments();
+        } catch (err) {
+            alert('Failed to assign technician');
+        }
+    };
     
     const TabButton: React.FC<{tabName: 'new' | 'active', children: React.ReactNode}> = ({tabName, children}) => (
         <button
@@ -61,8 +83,8 @@ const RoadsideAssistPage: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket #</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer & Location</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer Phone</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issue</th>
                                     {activeTab === 'active' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned To</th>}
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -72,11 +94,11 @@ const RoadsideAssistPage: React.FC = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {appointmentsResponse.data.map((appt) => (
                                     <tr key={appt.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{appt.ticketNo}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900">{appt.customer.name}</div>
                                             <div className="text-sm text-gray-500 flex items-center"><MapPinIcon className="h-4 w-4 mr-1 flex-shrink-0"/><span>{appt.location.address}</span></div>
                                         </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appt.customer.phone || 'N/A'}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{appt.issueType}</td>
                                         {activeTab === 'active' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{appt.assignedTech?.name || 'N/A'}</td>}
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -84,7 +106,9 @@ const RoadsideAssistPage: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             {activeTab === 'new' ? (
-                                                <button className="bg-brand-gold text-brand-blue-dark px-3 py-1 rounded-md hover:bg-brand-gold-dark text-xs font-semibold">
+                                                <button 
+                                                    onClick={() => openAssignModal(appt)}
+                                                    className="bg-brand-gold text-brand-blue-dark px-3 py-1 rounded-md hover:bg-brand-gold-dark text-xs font-semibold">
                                                     Assign Tech
                                                 </button>
                                             ) : (
@@ -100,6 +124,17 @@ const RoadsideAssistPage: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {isAssignModalOpen && selectedAppointment && (
+                <AssignRoadsideTechnicianModal
+                    appointment={selectedAppointment}
+                    onClose={() => {
+                        setAssignModalOpen(false);
+                        setSelectedAppointment(null);
+                    }}
+                    onAssign={handleAssignTechnician}
+                />
+            )}
         </div>
     );
 };

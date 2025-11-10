@@ -56,8 +56,8 @@ const ServiceAppointmentsPage: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                 <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket #</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer & Vehicle</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer Phone</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested Time</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -66,11 +66,11 @@ const ServiceAppointmentsPage: React.FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                 {appointmentsResponse.data.map((appt) => (
                     <tr key={appt.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{appt.ticketNo}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{appt.customer.name}</div>
                         <div className="text-sm text-gray-500">{`${appt.vehicle.year} ${appt.vehicle.make} ${appt.vehicle.model}`}</div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appt.customer.phone || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(appt.preferredTime).toLocaleString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                         <StatusChip status={appt.status} />

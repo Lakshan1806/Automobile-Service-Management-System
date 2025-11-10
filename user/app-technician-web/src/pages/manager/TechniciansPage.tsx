@@ -36,10 +36,9 @@ const TechniciansPage: React.FC = () => {
                 <thead className="bg-gray-50">
                 <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Skills</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Today's Load</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Available</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Appointed Works</th>
                 </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -53,14 +52,23 @@ const TechniciansPage: React.FC = () => {
                             </div>
                         </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {tech.skills.join(', ')}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                         <StatusChip status={tech.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tech.todayLoad} jobs</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tech.nextAvailable}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                        {tech.appointedWorks.length === 0 ? (
+                            <span className="text-gray-400">No active appointments</span>
+                        ) : (
+                            <div className="space-y-1">
+                                {tech.appointedWorks.map((work) => (
+                                    <div key={`${work.startDate}-${work.endDate}`}>
+                                        {work.label}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </td>
                     </tr>
                 ))}
                 </tbody>

@@ -9,6 +9,8 @@ import roadAssistRoutes from './routes/roadAssistRoutes.js';
 import { syncAppointments } from './controllers/appointmentController.js';
 import { syncTechnicians } from './controllers/technicianController.js';
 import { syncRoadAssistData } from './services/roadAssistService.js';
+import dotenv from "dotenv";
+dotenv.config();
 
 // Get current directory
 

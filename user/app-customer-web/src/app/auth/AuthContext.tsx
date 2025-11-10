@@ -45,7 +45,16 @@ function setupAxiosInterceptors(accessToken: string | null) {
     if (accessToken) {
       api.interceptors.request.use(config => {
         // Do not add auth header to login/signup
-        if (config.url?.endsWith('/login') || config.url?.endsWith('/signup')) {
+        const unauthenticatedPaths = [
+          "/api/customers/login",
+          "/api/customers/signup",
+          "/api/customers/signup/request-otp",
+          "/api/customers/signup/verify",
+        ];
+        if (
+          config.url &&
+          unauthenticatedPaths.some((path) => config.url.endsWith(path))
+        ) {
           return config;
         }
         

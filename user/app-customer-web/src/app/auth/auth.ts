@@ -20,6 +20,7 @@ export type CustomerVehicle = {
 
 export type SigninPayload = { email: string; password: string };
 export type SignupPayload = { name: string; email: string; password: string };
+export type VerifySignupPayload = { email: string; otp: string };
 
 export type SigninResponse = {
   customer: Customer;
@@ -29,6 +30,7 @@ export type SigninResponse = {
   roles: string[];
 };
 export type SignupResponse = { message: string; name: string; email: string };
+export type SignupOtpResponse = { message: string };
 
 export function cacheVehicles(vehicles: CustomerVehicle[]): void {
   if (typeof window === "undefined") {
@@ -97,9 +99,21 @@ export async function signin(payload: SigninPayload): Promise<SigninResponse> {
   return authResponse; 
 }
 
-export async function signup(payload: SignupPayload): Promise<SignupResponse> {
+export async function requestSignupOtp(
+  payload: SignupPayload,
+): Promise<SignupOtpResponse> {
+  const { data } = await authApi.post<SignupOtpResponse>(
+    "/api/customers/signup/request-otp",
+    payload,
+  );
+  return data;
+}
+
+export async function verifySignupOtp(
+  payload: VerifySignupPayload,
+): Promise<SignupResponse> {
   const { data } = await authApi.post<SignupResponse>(
-    "/api/customers/signup",
+    "/api/customers/signup/verify",
     payload,
   );
   return data;

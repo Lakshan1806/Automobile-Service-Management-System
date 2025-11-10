@@ -27,11 +27,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const setCredentials = (role: 'admin' | 'manager' | 'tech') => {
-    setEmail(`${role}@test.com`);
-    setPassword('password');
-  }
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
@@ -86,15 +81,6 @@ const LoginPage: React.FC = () => {
             </button>
           </div>
         </form>
-         <div className="text-center text-sm text-gray-500">
-            <p className="font-semibold mb-2">Demo Credentials:</p>
-            <div className="flex justify-around">
-              <button onClick={() => setCredentials('admin')} className="hover:underline">Admin</button>
-              <button onClick={() => setCredentials('manager')} className="hover:underline">Manager</button>
-              <button onClick={() => setCredentials('tech')} className="hover:underline">Technician</button>
-            </div>
-            <p className="mt-2">(Password is 'password')</p>
-          </div>
       </div>
     </div>
   );

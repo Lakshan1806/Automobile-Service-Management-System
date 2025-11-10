@@ -6,7 +6,9 @@ import com.example.authservice.dto.ChangePasswordRequest;
 import com.example.authservice.dto.CustomerResponse;
 import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.SignupRequest;
+import com.example.authservice.dto.SignupResponse;
 import com.example.authservice.dto.UpdateCustomerRequest;
+import com.example.authservice.dto.VerifySignupRequest;
 import com.example.authservice.security.JwtTokenService;
 import com.example.authservice.service.CustomerService;
 import jakarta.servlet.http.Cookie;
@@ -45,10 +47,19 @@ public class CustomerController {
         this.jwtTokenService = jwtTokenService;
     }
 
-    @PostMapping("/signup")
+    @PostMapping({"/signup", "/signup/request-otp"})
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public Map<String, String> requestSignupOtp(@Valid @RequestBody SignupRequest request) {
+        customerService.requestSignupOtp(request);
+        return Map.of(
+                "message",
+                "A verification code was sent to %s".formatted(request.getEmail()));
+    }
+
+    @PostMapping("/signup/verify")
     @ResponseStatus(HttpStatus.CREATED)
-    public CustomerResponse signup(@Valid @RequestBody SignupRequest request) {
-        return customerService.register(request);
+    public SignupResponse verifySignupOtp(@Valid @RequestBody VerifySignupRequest request) {
+        return customerService.verifySignupOtp(request);
     }
 
     @PostMapping("/login")
