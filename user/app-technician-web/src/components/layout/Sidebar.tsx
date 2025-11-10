@@ -52,12 +52,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     <NavLink
       to={to}
       end
-      onClick={() => setIsOpen(false)} // Close sidebar on mobile nav click
+      onClick={() => setIsOpen(false)}
       className={({ isActive }) =>
-        `flex items-center px-4 py-2 mt-2 text-sm font-semibold transition-colors duration-200 transform rounded-md ${
+        `flex items-center px-4 py-2 mt-2 text-sm font-semibold transition-colors duration-200 rounded-md border ${
           isActive
-            ? 'bg-brand-gold text-brand-blue-dark'
-            : 'text-gray-200 hover:text-white hover:bg-brand-blue-dark'
+            ? 'bg-[rgba(59,130,246,0.12)] border-[rgba(59,130,246,0.3)] text-[var(--foreground)]'
+            : 'text-[var(--text-dim)] border-transparent hover:text-[var(--foreground)] hover:bg-[rgba(148,163,184,0.12)]'
         }`
       }
     >
@@ -73,13 +73,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         onClick={() => setIsOpen(false)}
       ></div>
 
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-brand-blue text-white transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:flex-col`}>
-        <div className="flex items-center justify-between h-20 px-4 border-b border-brand-blue-dark">
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-[rgba(8,12,24,0.95)] text-[var(--foreground)] transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:flex-col border-r border-[var(--border)]`}>
+        <div className="flex items-center justify-between h-20 px-4 border-b border-[var(--border)]">
             <div className="flex items-center">
-                <WrenchScrewdriverIcon className="h-8 w-8 text-brand-gold"/>
+                <WrenchScrewdriverIcon className="h-8 w-8 text-[var(--primary)]"/>
                 <span className="text-2xl font-bold ml-2">AutoPro</span>
             </div>
-            <button className="lg:hidden text-gray-200 hover:text-white" onClick={() => setIsOpen(false)}>
+            <button className="lg:hidden text-[var(--text-dim)] hover:text-[var(--foreground)]" onClick={() => setIsOpen(false)}>
                 <XMarkIcon className="h-6 w-6" />
             </button>
         </div>

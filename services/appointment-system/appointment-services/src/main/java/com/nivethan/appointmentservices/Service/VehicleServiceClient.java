@@ -30,7 +30,7 @@ public class VehicleServiceClient {
         log.info("Fetching vehicle data for ID: {}", vehicleId);
 
         return webClient.get()
-                .uri("/vehicles/{vehicleId}/appointment-details", vehicleId) // <-- CORRECT
+                .uri("/vehicles/{vehicleId}/appointment-details", vehicleId)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
                     log.error("Client error when fetching vehicle data: {}", response.statusCode());
@@ -61,7 +61,6 @@ public class VehicleServiceClient {
         log.info("Fetching vehicle list for customer ID: {}", customerId);
 
         return webClient.get()
-                // .NET dev for this exact endpoint path ***
                 .uri("/customers/{customerId}/vehicles", customerId)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
