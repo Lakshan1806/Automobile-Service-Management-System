@@ -31,12 +31,9 @@ public class AppointmentService {
     private final VehicleServiceClient vehicleServiceClient;
     private final FastApiServiceClient fastApiServiceClient;
 
-    // --- IT WORKS! ---
     // Spring Boot automatically finds and injects this
     // bean from your new "template" JAR
     private final AuditProducerService auditProducer;
-
-    // ...
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
     
@@ -44,7 +41,7 @@ public class AppointmentService {
         log.info("Service: Getting vehicle summary list for customer: {}", customerId);
         return vehicleServiceClient.getVehiclesForCustomer(customerId);
     }
-    // --- ADD THIS NEW METHOD ---
+
     @Transactional
     public FastApiResponseDto getPrediction(PredictionRequestDto requestDto, String loggedInCustomerId) {
         log.info("Getting prediction for vehicle ID: {}", requestDto.getVehicleId());
@@ -80,14 +77,12 @@ public class AppointmentService {
 
         fastApiRequest.setVehicleModelYear(vehicleData.getVehicleModelYear());
 
-        log.info("Calling FastAPI with prediction request: {}", fastApiRequest);
+        log.info("Calling FastAPI with prediction request : {}", fastApiRequest);
 
         // Step 4: Get and return prediction
         return fastApiServiceClient.getSuggestedStartDate(fastApiRequest)
                 .block();
     }
-
-    // ... (rest of your existing methods:
 
     @Transactional
     public AppointmentResponseDto createAppointment(AppointmentRequestDto requestDto, String loggedInCustomerId) {

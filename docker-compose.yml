@@ -1,0 +1,103 @@
+
+services:
+  # --- 1. Database (Postgres) ---
+  postgres-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=ead_database
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_SECRET_PASSWORD}
+    ports:
+      - "5433:5432" 
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  # --- 2. Database (Mongo) ---
+  mongo-db:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  # --- 3. Kafka ---
+  kafka:
+    image: apache/kafka:4.1.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - CLUSTER_ID=ci_Nivethan_Project_123
+      - KAFKA_LISTENERS=PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://0.0.0.0:9092,CONTROLLER://kafka:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT_INTERNAL
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+
+  # --- 4. Auth Service (Spring) ---
+  auth-service:
+    build: ./services/authentication-service
+    ports:
+      - "9000:9000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_PASSWORD=${DB_SECRET_PASSWORD}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_MAIL_FROM=${ADMIN_MAIL_FROM}
+    depends_on:
+      - postgres-db
+
+  # --- 5. User Service (Node.js) ---
+  user-service:
+    build: ./services/user-service
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGO_URI=mongodb://mongo-db:27017/CustomerDB 
+      - AUTH_SERVICE_URL=http://auth-service:9000
+    depends_on:
+      - auth-service
+      - mongo-db 
+
+  # --- 6. Prediction Service (FastAPI) ---
+  prediction-service:
+    build: ./services/appointment-system/prediction-services
+    ports:
+      - "8000:8000"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - NODE_API_FINISHED_JOBS=http://host.docker.internal:8081/api/appointments?status=FINISHED
+      - NODE_API_ALL_JOBS=http://host.docker.internal:8081/api/appointments/active
+    depends_on:
+      - kafka
+      - user-service
+
+  # --- 7. Appointment Service (Spring) ---
+  appointment-service:
+    build:
+      context: .
+      dockerfile: ./services/appointment-system/appointment-services/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_PASSWORD=${DB_SECRET_PASSWORD}
+    depends_on:
+      - postgres-db
+      - prediction-service
+      - user-service
+      - kafka
+  
+  # --- We are NOT running the frontend in Docker ---
+
+volumes:
+  postgres-data:
+  mongo-data: 

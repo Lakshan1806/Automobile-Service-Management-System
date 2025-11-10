@@ -14,10 +14,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import settings
 from training import EnhancedVehicleRepairModel, train_enhanced_model
 
-# --- Kafka Imports ---
 from aiokafka import AIOKafkaProducer
 import json
-# ---
+
 
 app = FastAPI(
     title="Enhanced Vehicle Scheduling Prediction API",
@@ -43,16 +42,13 @@ async def send_prediction_event(event: "PredictionEvent"):
     """
     global kafka_producer
     
-    # --- THIS IS THE FIX ---
-    # We only check if the producer object was successfully created.
-    # Our startup logic sets it to None if it fails to connect.
+    
     if kafka_producer is None:
         print("ERROR: Kafka producer is not running. Skipping event.")
-        return  # Do not hang, just return
-    # --- END OF FIX ---
+        return  
         
     try:
-        # Use send() instead of send_and_wait()
+        # send() instead of send_and_wait()
         # This will not block the API request.
         await kafka_producer.send(
             settings.PREDICTION_EVENTS_TOPIC,
@@ -61,7 +57,6 @@ async def send_prediction_event(event: "PredictionEvent"):
         )
         print(f"Sent audit event: {event.eventType}")
     except Exception as e:
-        # We catch the error so the API request does not fail
         print(f"CRITICAL: Could not send prediction event to Kafka: {e}")
 
 # ---
@@ -152,7 +147,11 @@ def create_prediction_features(request: EnhancedRepairRequest) -> pd.DataFrame:
         'high_millage': int(request.millage > settings.HIGH_MILLAGE_THRESHOLD),
         'is_premium_brand': int(vehicle_brand in ['mercedes', 'bmw', 'audi', 'lexus', 'volvo']),
         'is_complex_repair': int(repair_type in ['engine', 'transmission', 'electrical', 'hybrid']),
-        'month': datetime.now().month
+        'month': datetime.now().month,
+        'millage_category': pd.cut([request.millage], 
+                                  bins=[0, 30000, 60000, 100000, 200000, float('inf')],
+                                  labels=['very_low', 'low', 'medium', 'high', 'very_high'],
+                                  right=False)[0]
     }
     
     # Ensure correct feature order
@@ -374,10 +373,6 @@ async def shutdown_event():
     if kafka_producer:
         await kafka_producer.stop()
         print("Kafka producer stopped.")
-
-# ---
-# --- END OF MODIFIED Startup/Shutdown
-# ---
 
 
 # --- API Endpoints ---
