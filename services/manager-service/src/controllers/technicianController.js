@@ -5,28 +5,41 @@ import Technician from '../models/Technician.js';
 import Appointment from '../models/Appointment.js';
 import RoadAssist from '../models/RoadAssist.js';
 
-const EXTERNAL_SERVICE_URL = 'http://localhost:5000';
-
 /**
  * Sync technicians from external service to local database
  */
 export const syncTechnicians = async () => {
   try {
+    const adminBase = (process.env.ADMIN_SERVICE_URL || 'http://localhost:5000').replace(/\/+$/, '');
+    const technicianFeedUrl = process.env.ADMIN_TECHNICIAN_URL || `${adminBase}/api/technicians/`;
+
     console.log('Syncing technicians from external service...');
-    const response = await axios.get(`${EXTERNAL_SERVICE_URL}/api/technicians`);
+    console.log('Technician feed URL:', technicianFeedUrl);
+    const response = await axios.get(technicianFeedUrl);
     let technicians = Array.isArray(response.data) ? response.data : [response.data];
 
     console.log(`Found ${technicians.length} technicians to sync`);
 
     // Process each technician to ensure required fields
-    const processedTechs = technicians.map(tech => ({
-      technicianId: tech.technicianId || tech.id || new mongoose.Types.ObjectId().toString(),
-      technicianName: tech.technicianName || tech.name || 'Unknown Technician',
-      phoneNumber: tech.phoneNumber || tech.phone || '',
-      email: tech.email || '',
-      // Preserve any other fields from the API
-      ...tech
-    }));
+    const processedTechs = technicians.map(tech => {
+      const externalId =
+        tech.technicianId ||
+        tech.employee_id ||
+        tech.id ||
+        (tech._id ? tech._id.toString() : null) ||
+        new mongoose.Types.ObjectId().toString();
+
+      return {
+        technicianId: externalId.toString(),
+        technicianName: tech.technicianName || tech.name || tech.fullName || 'Unknown Technician',
+        phoneNumber: tech.phoneNumber || tech.phone || tech.phone_number || '',
+        email: tech.email || '',
+        status: tech.status || 'active',
+        role: tech.role || 'Technician',
+        // Preserve any other fields from the API
+        ...tech
+      };
+    });
 
     // Clear existing technicians
     await Technician.deleteMany({});
@@ -69,6 +82,13 @@ export const syncTechnicians = async () => {
  */
 export const getTechnicians = async (req, res) => {
   try {
+    // Attempt to refresh local cache before serving data so frontend always sees latest technicians
+    try {
+      await syncTechnicians();
+    } catch (syncError) {
+      console.warn('Failed to sync technicians before fetch:', syncError.message);
+    }
+
     const technicians = await Technician.find({});
     res.json({
       success: true,

@@ -223,6 +223,13 @@ export const assignTechnician = async (req, res) => {
  */
 export async function getAppointments(req, res) {
   try {
+    // Refresh appointments from external service before returning cached data
+    try {
+      await syncAppointments();
+    } catch (syncError) {
+      console.warn('Failed to sync appointments before fetch:', syncError.message);
+    }
+
     const appointments = await Appointment.find({}).sort({ createdAt: -1 });
     res.json({ success: true, data: appointments });
   } catch (error) {

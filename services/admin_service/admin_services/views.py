@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import APIException
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Employee, Branch, Service, Product
 from .serializers import EmployeeSerializer, BranchSerializer, ServiceSerializer, ProductSerializer
@@ -75,6 +76,15 @@ class EmployeeListView(AdminOrManagerProtectedView, generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["role"]
     search_fields = ["name", "email"]
+
+class TechnicianPublicListView(generics.ListAPIView):
+    """Public endpoint to expose technicians for internal services."""
+    serializer_class = EmployeeSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get_queryset(self):
+        return Employee.objects.filter(role="Technician")
 
 # UPDATE EMPLOYEE
 class EmployeeUpdateView(AdminProtectedView, generics.UpdateAPIView):

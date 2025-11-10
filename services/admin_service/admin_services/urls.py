@@ -4,6 +4,7 @@ from .views import (
     EmployeeUpdateView,
     EmployeeDeleteView,
     EmployeeListView,
+    TechnicianPublicListView,
     EmployeeRoleView,
 )
 from .views import (
@@ -33,6 +34,7 @@ urlpatterns = [
     path("employees/<int:employee_id>/", EmployeeUpdateView.as_view(), name="update_employee"),
     path("employees/<int:employee_id>/delete/", EmployeeDeleteView.as_view(), name="delete_employee"),
     path("employees/role/", EmployeeRoleView.as_view(), name="get_employee_role"),
+    path("technicians/", TechnicianPublicListView.as_view(), name="public_list_technicians"),
 
     path('branches/create/', BranchCreateView.as_view(), name='branch_create'),
     path('branches/', BranchListView.as_view(), name='branch_list'),
