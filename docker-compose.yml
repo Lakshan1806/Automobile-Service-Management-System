@@ -16,7 +16,7 @@ services:
   mongo-db:
     image: mongo:latest
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo-data:/data/db
   
@@ -63,6 +63,7 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo-db:27017/CustomerDB 
       - AUTH_SERVICE_URL=http://auth-service:9000
+      - AUTH_SERVICE_TIMEOUT_MS=5000
     depends_on:
       - auth-service
       - mongo-db 
