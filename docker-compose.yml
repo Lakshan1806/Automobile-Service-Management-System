@@ -102,7 +102,7 @@ services:
     build:
       context: ./services/location-service
     ports:
-      - "5010:5000"  
+      - "5010:5010"  
     env_file:
       - ./services/location-service/.env
   # --- We are NOT running the frontend in Docker ---
