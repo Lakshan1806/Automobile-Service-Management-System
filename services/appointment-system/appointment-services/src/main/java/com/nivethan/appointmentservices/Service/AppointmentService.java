@@ -282,6 +282,7 @@ public class AppointmentService {
         AppointmentResponseDto response = new AppointmentResponseDto();
         response.setId(appointment.getId());
         response.setVehicleId(appointment.getVehicleId());
+        response.setCustomerId(appointment.getCustomerId());
         response.setNoPlate(appointment.getNoPlate());
         response.setCustomerName(appointment.getCustomerName());
         response.setCustomerPhone(appointment.getCustomerPhone());
