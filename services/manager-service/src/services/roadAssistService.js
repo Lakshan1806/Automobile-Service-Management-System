@@ -2,7 +2,7 @@ import axios from 'axios';
 import mongoose from 'mongoose';
 import RoadAssist from '../models/RoadAssist.js';
 
-const API_URL = 'http://localhost:5000/api/roadassist';
+const API_URL = 'http://localhost:5010/api/roadassist';
 
 /**
  * Fetches road assist data from the external API

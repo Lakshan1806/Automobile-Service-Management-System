@@ -71,7 +71,7 @@ services:
   prediction-service:
     build: ./services/appointment-system/prediction-services
     ports:
-      - "8000:8000"
+      - "8010:8000"
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - NODE_API_FINISHED_JOBS=http://host.docker.internal:8081/api/appointments?status=FINISHED
@@ -101,12 +101,9 @@ services:
     build:
       context: ./services/location-service
     ports:
-      - "5000:5000"  
+      - "5010:5000"  
     env_file:
       - ./services/location-service/.env
-    stdin_open: true
-    tty: true
-    restart: unless-stopped
   # --- We are NOT running the frontend in Docker ---
 
 volumes:

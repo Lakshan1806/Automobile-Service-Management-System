@@ -11,6 +11,7 @@ import java.time.LocalDate;
 public class AppointmentResponseDto {
     private Long id;
     private String vehicleId;
+    private String customerId;
     private String vehicleBrand;
     private String vehicleType;
     private String chaseNo;

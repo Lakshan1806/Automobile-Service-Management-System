@@ -175,6 +175,25 @@ class ServiceListView(AdminProtectedView, generics.ListAPIView):
     serializer_class = ServiceSerializer
 
 
+# PUBLIC: VIEW ALL SERVICES (for technician-service)
+class ServiceListPublicView(generics.ListAPIView):
+    """Public endpoint for technician-service to fetch services"""
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+    authentication_classes = []  # No authentication required
+    permission_classes = []  # No permissions required
+
+
+# PUBLIC: GET SERVICE BY ID (for technician-service)
+class ServiceDetailPublicView(generics.RetrieveAPIView):
+    """Public endpoint for technician-service to fetch a service by ID"""
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+    lookup_field = "service_id"
+    authentication_classes = []
+    permission_classes = []
+
+
 # UPDATE SERVICE
 class ServiceUpdateView(AdminProtectedView, generics.UpdateAPIView):
     queryset = Service.objects.all()
@@ -204,6 +223,54 @@ class ProductListView(AdminProtectedView, generics.ListAPIView):
     search_fields = ['name', 'description']
     ordering_fields = ['price']
     ordering = ['price']  # default sort by ascending price
+
+
+# PUBLIC: VIEW ALL PRODUCTS (for technician-service)
+class ProductListPublicView(generics.ListAPIView):
+    """Public endpoint for technician-service to fetch products"""
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['price']
+    ordering = ['price']
+    authentication_classes = []
+    permission_classes = []
+
+
+# PUBLIC: GET PRODUCT BY ID (for technician-service)
+class ProductDetailPublicView(generics.RetrieveAPIView):
+    """Public endpoint for technician-service to fetch a product by ID"""
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    lookup_field = 'product_id'
+    authentication_classes = []
+    permission_classes = []
+
+
+# PUBLIC: UPDATE PRODUCT STOCK (for technician-service)
+class ProductStockUpdatePublicView(APIView):
+    """Public endpoint for technician-service to update product stock"""
+    authentication_classes = []
+    permission_classes = []
+
+    def patch(self, request, product_id):
+        try:
+            product = Product.objects.get(product_id=product_id)
+            new_stock = request.data.get('stock')
+            
+            if new_stock is None:
+                return Response({"error": "Stock value required"}, status=400)
+            
+            product.stock = new_stock
+            product.save()
+            
+            serializer = ProductSerializer(product, context={'request': request})
+            return Response(serializer.data)
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 
 # UPDATE PRODUCT

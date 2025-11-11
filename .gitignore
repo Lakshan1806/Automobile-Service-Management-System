@@ -1,7 +1,7 @@
 /.vs/
 /mock-back/
 .DS_Store
-
+.vscode
 
 
 # Payment-service local artifacts
