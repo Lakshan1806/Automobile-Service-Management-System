@@ -56,17 +56,40 @@ class EmployeeCreateView(AdminProtectedView, generics.CreateAPIView):
         base_url = getattr(settings, "EMPLOYEE_INVITE_BASE_URL", "http://localhost:5173/create-password")
         invite_link = f"{base_url.rstrip('/')}/{emp.invite_token}/"
         subject = "Set Up Your Novadrive Account"
-        message = (
-            f"Hi {emp.name},\n\n"
-            f"Welcome to Novadrive Automotive!\n\n"
-            f"Your account has been created as a {emp.role}.\n"
-            f"Please set your password using the link below:\n"
-            f"{invite_link}\n\n"
-            "This link will expire after use.\n\n"
-            "Best regards,\nNovadrive Team"
-        )
+        body = f"""
+        <p>Hi {emp.name},</p>
+        <p>Welcome to <b>Novadrive Automotive</b>!</p>
+        <p>Your account has been created as a <b>{emp.role}</b>.</p>
+        <p>Please set your password using the link below:</p>
+        <a href="{invite_link}" target="_blank">{invite_link}</a>
+        <p>This link will expire after use.</p>
+        <p>Best regards,<br>Novadrive Team</p>
+        """
 
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [emp.email], fail_silently=False)
+        notification_url = getattr(settings, "NOTIFICATION_SERVICE_BASE_URL", None)
+        if not notification_url:
+            logger.error("Notification service URL not configured")
+            raise APIException("Notification service URL not configured")
+
+        payload = {
+            "to": emp.email,
+            "subject": subject,
+            "body": body,
+            "is_html": True
+        }
+
+        try:
+            response = requests.post(notification_url, json=payload, timeout=10)
+            if response.status_code >= 400:
+                logger.error(
+                    "Failed to send invite email via notification service: %s %s",
+                    response.status_code,
+                    response.text,
+                )
+                raise APIException("Failed to send invite email")
+        except requests.RequestException as exc:
+            logger.exception("Error calling notification service")
+            raise APIException("Error sending invite email") from exc
 
 
 # LIST ALL EMPLOYEES (with filters and search)
@@ -97,22 +120,6 @@ class EmployeeDeleteView(AdminProtectedView, generics.DestroyAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     lookup_field = "employee_id"
-
-# GET ROLE BY EMAIL
-class EmployeeRoleView(AdminProtectedView, APIView):
-    def get(self, request):
-        email = request.GET.get("email")
-        if not email:
-            return Response({"error": "Email required"}, status=400)
-
-        try:
-            emp = Employee.objects.get(email=email)
-            return Response({
-                "email": emp.email,
-                "role": emp.role,
-            })
-        except Employee.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
 
 # CREATE BRANCH
 class BranchCreateView(AdminProtectedView, generics.CreateAPIView):
