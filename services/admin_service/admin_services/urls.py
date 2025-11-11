@@ -19,14 +19,18 @@ from .views import (
     ServiceListView,
     ServiceUpdateView,
     ServiceDeleteView,
+    ServiceListPublicView,
+    ServiceDetailPublicView,
 )
 from .views import (
     ProductCreateView,
     ProductListView,
     ProductUpdateView,
     ProductDeleteView,
+    ProductListPublicView,
+    ProductDetailPublicView,
+    ProductStockUpdatePublicView,
 )
-
 
 urlpatterns = [
     path("employees/create/", EmployeeCreateView.as_view(), name="create_employee"),
@@ -46,9 +50,19 @@ urlpatterns = [
     path("services/", ServiceListView.as_view(), name="service_list"),
     path("services/<int:service_id>/update/", ServiceUpdateView.as_view(), name="service_update"),
     path("services/<int:service_id>/delete/", ServiceDeleteView.as_view(), name="service_delete"),
+    
+    # Public endpoints for technician-service
+    path("public/services/", ServiceListPublicView.as_view(), name="service_list_public"),
+    path("public/services/<int:service_id>/", ServiceDetailPublicView.as_view(), name="service_detail_public"),
 
     path('products/create/', ProductCreateView.as_view(), name='product_create'),
     path('products/', ProductListView.as_view(), name='product_list'),
     path('products/<int:product_id>/update/', ProductUpdateView.as_view(), name='product_update'),
     path('products/<int:product_id>/delete/', ProductDeleteView.as_view(), name='product_delete'),
+    
+    # Public endpoints for technician-service
+    path('public/products/', ProductListPublicView.as_view(), name='product_list_public'),
+    path('public/products/<int:product_id>/', ProductDetailPublicView.as_view(), name='product_detail_public'),
+    path('public/products/<int:product_id>/stock/', ProductStockUpdatePublicView.as_view(), name='product_stock_update_public'),
 ]
+
