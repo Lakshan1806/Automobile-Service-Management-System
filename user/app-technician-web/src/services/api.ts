@@ -166,6 +166,22 @@ const realAdminEmployeesApi = {
       }),
     });
   },
+  updateEmployee: async (id: number | string, input: AdminEmployeeCreateInput): Promise<void> => {
+    const numericId = Number(id);
+    if (Number.isNaN(numericId)) {
+      throw new Error('Invalid employee identifier');
+    }
+    await adminApiFetch(`/employees/${numericId}/`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        email: input.email,
+        name: input.name,
+        role: toBackendRole(input.role),
+        phone_number: input.phoneNumber ?? null,
+      }),
+    });
+  },
+
   deleteEmployee: async (id: number | string): Promise<void> => {
     const numericId = Number(id);
     if (Number.isNaN(numericId)) {
@@ -193,6 +209,21 @@ const realAdminBranchesApi = {
       }),
     });
   },
+  updateBranch: async (id: number | string, input: AdminBranchCreateInput): Promise<void> => {
+    const numericId = Number(id);
+    if (Number.isNaN(numericId)) {
+      throw new Error('Invalid branch identifier');
+    }
+    await adminApiFetch(`/branches/${numericId}/update/`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: input.name,
+        location: input.location,
+        manager: input.managerId ?? null,
+      }),
+    });
+  },
+
   deleteBranch: async (id: number | string): Promise<void> => {
     const numericId = Number(id);
     if (Number.isNaN(numericId)) {
@@ -220,6 +251,21 @@ const realAdminServicesApi = {
       }),
     });
   },
+  updateService: async (id: number | string, input: AdminServiceCreateInput): Promise<void> => {
+    const numericId = Number(id);
+    if (Number.isNaN(numericId)) {
+      throw new Error('Invalid service identifier');
+    }
+    await adminApiFetch(`/services/${numericId}/update/`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: input.name,
+        description: input.description,
+        price: input.price,
+      }),
+    });
+  },
+
   deleteService: async (id: number | string): Promise<void> => {
     const numericId = Number(id);
     if (Number.isNaN(numericId)) {
@@ -251,6 +297,27 @@ const realAdminProductsApi = {
       body: formData,
     });
   },
+  updateProduct: async (id: number | string, input: AdminProductCreateInput): Promise<void> => {
+    const numericId = Number(id);
+    if (Number.isNaN(numericId)) {
+      throw new Error('Invalid product identifier');
+    }
+
+    const formData = new FormData();
+    formData.append('name', input.name);
+    formData.append('description', input.description);
+    formData.append('price', String(input.price));
+    formData.append('stock', String(input.stock));
+    if (input.imageFile) {
+      formData.append('image', input.imageFile);
+    }
+
+    await adminApiFetch(`/products/${numericId}/update/`, {
+      method: 'PUT',
+      body: formData,
+    });
+  },
+
   deleteProduct: async (id: number | string): Promise<void> => {
     const numericId = Number(id);
     if (Number.isNaN(numericId)) {
@@ -577,15 +644,13 @@ const mapServiceAppointmentFromApi = (raw: any): ServiceAppointment => {
     Number.isFinite(durationFromApi) && durationFromApi > 0
       ? durationFromApi
       : plannedStart && plannedEndSource
-      ? Math.max(
+        ? Math.max(
           1,
           Math.ceil(
-            (new Date(plannedEndSource).getTime() -
-              new Date(plannedStart).getTime()) /
-              DAY_IN_MS
+            (new Date(plannedEndSource).getTime() - new Date(plannedStart).getTime()) / DAY_IN_MS
           )
         )
-      : 1;
+        : 1;
   const fallbackEnd =
     plannedStart !== null
       ? new Date(
@@ -647,17 +712,14 @@ const mapAppointedWorksFromApi = (raw: any): TechnicianAppointedWork[] => {
       }
 
       const explicitDuration = Number(task.workDuration);
-      const normalizedDuration =
-        Number.isFinite(explicitDuration) && explicitDuration > 0
-          ? explicitDuration
-          : Math.max(
-              1,
-              Math.round(
-                (new Date(task.endDate || task.startDate).getTime() -
-                  startDate.getTime()) /
-                  DAY_IN_MS || 1
-              )
-            );
+      const normalizedDuration = Number.isFinite(explicitDuration) && explicitDuration > 0
+        ? explicitDuration
+        : Math.max(
+          1,
+          Math.round(
+            ((new Date(task.endDate || task.startDate).getTime() - startDate.getTime()) / DAY_IN_MS) || 1
+          )
+        );
 
       const endDate = task.endDate
         ? new Date(task.endDate)
@@ -889,11 +951,11 @@ const unwrapManagerEntry = <T = any>(payload: any): T | null => {
 const realApi = {
   login: async (email: string, pass: string): Promise<User> => {
     const response = await fetch(`${AUTH_API_BASE}/api/employees/login`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
-      credentials: "include",
+      credentials: 'include',
       body: JSON.stringify({ email, password: pass }),
     });
 
@@ -905,14 +967,11 @@ const realApi = {
     return mapEmployeeAuthToUser(payload);
   },
 
-  activateEmployeeAccount: async (
-    inviteToken: string,
-    password: string
-  ): Promise<void> => {
+  activateEmployeeAccount: async (inviteToken: string, password: string): Promise<void> => {
     const response = await fetch(`${AUTH_API_BASE}/api/employees/activate`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ inviteToken, password }),
     });
@@ -921,56 +980,32 @@ const realApi = {
       throw new Error(await extractErrorMessage(response));
     }
   },
-  getServiceAppointments: async (
-    statuses: ServiceAppointmentStatus[],
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<ServiceAppointment>> => {
-    const payload = await fetchManagerApi<{ success: boolean; data: any[] }>(
-      "/appointments"
-    );
+  getServiceAppointments: async (statuses: ServiceAppointmentStatus[], page = 1, perPage = 10): Promise<PaginatedResponse<ServiceAppointment>> => {
+    const payload = await fetchManagerApi<{ success: boolean; data: any[] }>('/appointments');
     const mapped = (payload.data || []).map(mapServiceAppointmentFromApi);
-    const filtered = statuses?.length
-      ? mapped.filter((appt) => statuses.includes(appt.status))
-      : mapped;
+    const filtered = statuses?.length ? mapped.filter(appt => statuses.includes(appt.status)) : mapped;
     return paginateResponse(filtered, page, perPage);
   },
-  assignTechnician: async (
-    appointmentId: string,
-    technicianId: string
-  ): Promise<ServiceAppointment> => {
-    await fetchManagerApi<{ success: boolean }>("/appointments/assign", {
-      method: "POST",
+  assignTechnician: async (appointmentId: string, technicianId: string): Promise<ServiceAppointment> => {
+    await fetchManagerApi<{ success: boolean }>('/appointments/assign', {
+      method: 'POST',
       body: JSON.stringify({ appointmentId, technicianId }),
     });
-    const refreshed = await fetchManagerApi<{ success: boolean; data: any[] }>(
-      "/appointments"
-    );
+    const refreshed = await fetchManagerApi<{ success: boolean; data: any[] }>('/appointments');
     const updated = (refreshed.data || []).find(
-      (appt: any) =>
-        appt?._id?.toString() === appointmentId ||
-        appt?.appointmentId === appointmentId
+      (appt: any) => appt?._id?.toString() === appointmentId || appt?.appointmentId === appointmentId
     );
-    return updated
-      ? mapServiceAppointmentFromApi(updated)
-      : mapServiceAppointmentFromApi({ _id: appointmentId, technicianId });
+    return updated ? mapServiceAppointmentFromApi(updated) : mapServiceAppointmentFromApi({ _id: appointmentId, technicianId });
   },
-  assignRoadsideTechnician: async (
-    customId: string,
-    technicianId: string
-  ): Promise<RoadsideAppointment> => {
+  assignRoadsideTechnician: async (customId: string, technicianId: string): Promise<RoadsideAppointment> => {
     await fetchManagerApi<{ success: boolean }>(
-      `/roadassists/by-custom-id/${encodeURIComponent(
-        customId
-      )}/assign-technician`,
+      `/roadassists/by-custom-id/${encodeURIComponent(customId)}/assign-technician`,
       {
-        method: "PUT",
+        method: 'PUT',
         body: JSON.stringify({ technicianId }),
       }
     );
-    const refreshed = await fetchManagerApi<{ success: boolean; data: any[] }>(
-      "/roadassists"
-    );
+    const refreshed = await fetchManagerApi<{ success: boolean; data: any[] }>('/roadassists');
     const updated = (refreshed.data || []).find(
       (appt: any) =>
         appt?.customId === customId ||
@@ -1136,6 +1171,10 @@ export const adminService = {
   addEmployee: async (input: AdminEmployeeCreateInput): Promise<void> => {
     return realAdminEmployeesApi.addEmployee(input);
   },
+  updateEmployee: async (id: number | string, input: AdminEmployeeCreateInput): Promise<void> => {
+    assertRealAdminApi();
+    return realAdminEmployeesApi.updateEmployee(id, input);
+  },
   deleteEmployee: async (id: number | string): Promise<void> => {
     return realAdminEmployeesApi.deleteEmployee(id);
   },
@@ -1148,11 +1187,25 @@ export const adminService = {
   deleteBranch: async (id: number | string): Promise<void> => {
     return realAdminBranchesApi.deleteBranch(id);
   },
+  getAvailableManagers: async (): Promise<{ id: number; name: string; email: string }[]> => {
+    assertRealAdminApi();
+    const response = await adminApiFetch('/branches/managers/', { method: 'GET' });
+    return response.json();
+  },
+  updateBranch: async (id: number | string, input: AdminBranchCreateInput): Promise<void> => {
+    assertRealAdminApi();
+    return realAdminBranchesApi.updateBranch(id, input);
+  },
+
   getServices: async (): Promise<AdminServiceItem[]> => {
     return realAdminServicesApi.getServices();
   },
   addService: async (input: AdminServiceCreateInput): Promise<void> => {
     return realAdminServicesApi.addService(input);
+  },
+  updateService: async (id: number | string, input: AdminServiceCreateInput): Promise<void> => {
+    assertRealAdminApi();
+    return realAdminServicesApi.updateService(id, input);
   },
   deleteService: async (id: number | string): Promise<void> => {
     return realAdminServicesApi.deleteService(id);
@@ -1162,6 +1215,10 @@ export const adminService = {
   },
   addProduct: async (input: AdminProductCreateInput): Promise<void> => {
     return realAdminProductsApi.addProduct(input);
+  },
+  updateProduct: async (id: number | string, input: AdminProductCreateInput): Promise<void> => {
+    assertRealAdminApi();
+    return realAdminProductsApi.updateProduct(id, input);
   },
   deleteProduct: async (id: number | string): Promise<void> => {
     return realAdminProductsApi.deleteProduct(id);

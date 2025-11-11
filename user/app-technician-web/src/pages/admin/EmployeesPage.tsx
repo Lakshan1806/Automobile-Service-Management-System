@@ -13,10 +13,12 @@ const EmployeesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<AdminEmployee | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<AdminEmployee | null>(null);
   const { addToast } = useToast();
 
+  // Fetch employees
   const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true);
@@ -35,17 +37,31 @@ const EmployeesPage: React.FC = () => {
     fetchEmployees();
   }, [fetchEmployees]);
 
+  // Add or Edit employee
   const handleSaveEmployee = async (employeeData: AdminEmployeeCreateInput) => {
     try {
-      await adminService.addEmployee(employeeData);
+      if (editingEmployee) {
+        await adminService.updateEmployee(editingEmployee.id, employeeData);
+        addToast('Employee updated successfully!', 'success');
+      } else {
+        await adminService.addEmployee(employeeData);
+        addToast('Employee added successfully!', 'success');
+      }
       setIsAddModalOpen(false);
-      fetchEmployees(); // re-fetch to show the new employee
-      addToast('Employee added successfully!', 'success');
+      setEditingEmployee(null);
+      fetchEmployees();
     } catch (err) {
       addToast('Failed to save employee.', 'error');
     }
   };
 
+  // Open edit modal
+  const openEditModal = (employee: AdminEmployee) => {
+    setEditingEmployee(employee);
+    setIsAddModalOpen(true);
+  };
+
+  // Delete employee
   const openDeleteModal = (employee: AdminEmployee) => {
     setSelectedEmployee(employee);
     setIsDeleteModalOpen(true);
@@ -54,80 +70,98 @@ const EmployeesPage: React.FC = () => {
   const handleDeleteEmployee = async () => {
     if (!selectedEmployee) return;
     try {
-        await adminService.deleteEmployee(selectedEmployee.id);
-        setIsDeleteModalOpen(false);
-        setSelectedEmployee(null);
-        fetchEmployees();
-        addToast('Employee deleted successfully!', 'success');
+      await adminService.deleteEmployee(selectedEmployee.id);
+      setIsDeleteModalOpen(false);
+      setSelectedEmployee(null);
+      fetchEmployees();
+      addToast('Employee deleted successfully!', 'success');
     } catch (err) {
-        addToast('Failed to delete employee.', 'error');
-        setIsDeleteModalOpen(false);
+      addToast('Failed to delete employee.', 'error');
+      setIsDeleteModalOpen(false);
     }
   };
 
   return (
     <div>
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Manage Employees</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">
+          Manage Employees
+        </h1>
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+            setEditingEmployee(null);
+            setIsAddModalOpen(true);
+          }}
           className="flex items-center justify-center bg-brand-blue text-white px-4 py-2 rounded-md hover:bg-brand-blue-dark w-full sm:w-auto"
         >
-            <UserPlusIcon className="h-5 w-5 mr-2" />
-            Add Employee
+          <UserPlusIcon className="h-5 w-5 mr-2" />
+          Add Employee
         </button>
       </div>
 
+      {/* Table */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-            {loading && <p className="p-4">Loading...</p>}
-            {error && <p className="p-4 text-red-500">{error}</p>}
-            {employees.length > 0 && (
+          {loading && <p className="p-4">Loading...</p>}
+          {error && <p className="p-4 text-red-500">{error}</p>}
+          {employees.length > 0 && (
             <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <thead className="bg-gray-50">
                 <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                  <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                 </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {employees.map((employee) => (
-                    <tr key={employee.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                    </td>
+                  <tr key={employee.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{employee.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{employee.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatRole(employee.role)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{employee.phoneNumber || '—'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-indigo-600 hover:text-indigo-900 mr-4"><PencilIcon className="h-5 w-5"/></button>
-                        <button onClick={() => openDeleteModal(employee)} className="text-red-600 hover:text-red-900"><TrashIcon className="h-5 w-5"/></button>
+                      <button onClick={() => openEditModal(employee)} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button onClick={() => openDeleteModal(employee)} className="text-red-600 hover:text-red-900">
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
                     </td>
-                    </tr>
+                  </tr>
                 ))}
-                </tbody>
+              </tbody>
             </table>
-            )}
-            {!loading && !error && employees.length === 0 && (
-              <p className="p-4 text-gray-500">No employees found.</p>
-            )}
+          )}
+          {!loading && !error && employees.length === 0 && (
+            <p className="p-4 text-gray-500">No employees found.</p>
+          )}
         </div>
       </div>
+
+      {/* Add/Edit Employee Modal */}
       <AddEmployeeModal
+        key={editingEmployee?.id || 'new'}
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingEmployee(null);
+        }}
         onSave={handleSaveEmployee}
+        initialData={editingEmployee}
       />
+
+      {/* Delete Confirmation Modal */}
       {selectedEmployee && (
         <ConfirmDeleteModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onConfirm={handleDeleteEmployee}
-            title="Delete Employee"
-            message={`Are you sure you want to delete ${selectedEmployee.name}? This action cannot be undone.`}
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDeleteEmployee}
+          title="Delete Employee"
+          message={`Are you sure you want to delete ${selectedEmployee.name}? This action cannot be undone.`}
         />
       )}
     </div>
