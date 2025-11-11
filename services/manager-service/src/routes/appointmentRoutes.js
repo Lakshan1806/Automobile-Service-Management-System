@@ -6,7 +6,8 @@ import {
   getAppointments, 
   assignTechnician,
   getActiveAppointments,
-  getFinishedAppointments 
+  getFinishedAppointments,
+  getAppointmentsForTechnician,
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
@@ -23,6 +24,9 @@ router.get('/sync', async (req, res) => {
 
 // Get all appointments from local database
 router.get('/', getAppointments);
+
+// Get appointments assigned to a specific technician
+router.get('/assigned/:technicianId', getAppointmentsForTechnician);
 
 // Get active appointments (pending, inprocess, scheduled)
 router.get('/active', getActiveAppointments);

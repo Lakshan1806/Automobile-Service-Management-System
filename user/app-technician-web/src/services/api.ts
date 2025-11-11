@@ -63,139 +63,6 @@ const mockApi = {
     throw new Error("Invalid credentials");
   },
 
-  getEmployees: async (
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<Employee>> => {
-    await delay(800);
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = mockDb.employees.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: mockDb.employees.length,
-        page,
-        perPage,
-        pages: Math.ceil(mockDb.employees.length / perPage),
-      },
-    };
-  },
-
-  addEmployee: async (
-    employeeData: Omit<Employee, "id" | "createdAt">
-  ): Promise<Employee> => {
-    await delay(500);
-    const newEmployee: Employee = {
-      ...employeeData,
-      id: `emp-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    mockDb.employees.unshift(newEmployee);
-    return newEmployee;
-  },
-
-  deleteEmployee: async (id: string): Promise<void> => {
-    await delay(500);
-    const index = mockDb.employees.findIndex((e) => e.id === id);
-    if (index > -1) {
-      mockDb.employees.splice(index, 1);
-    } else {
-      throw new Error("Employee not found");
-    }
-  },
-
-  getBranches: async (
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<Branch>> => {
-    await delay(600);
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = mockDb.branches.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: mockDb.branches.length,
-        page,
-        perPage,
-        pages: Math.ceil(mockDb.branches.length / perPage),
-      },
-    };
-  },
-
-  addBranch: async (
-    branchData: Omit<Branch, "id" | "manager" | "techCount">
-  ): Promise<Branch> => {
-    await delay(500);
-    const newBranch: Branch = {
-      ...branchData,
-      id: `branch-${Date.now()}`,
-      manager: null,
-      techCount: 0,
-    };
-    mockDb.branches.unshift(newBranch);
-    return newBranch;
-  },
-
-  deleteBranch: async (id: string): Promise<void> => {
-    await delay(500);
-    const index = mockDb.branches.findIndex((b) => b.id === id);
-    if (index > -1) {
-      mockDb.branches.splice(index, 1);
-    } else {
-      throw new Error("Branch not found");
-    }
-  },
-
-  getServiceAppointments: async (
-    statuses: ServiceAppointmentStatus[],
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<ServiceAppointment>> => {
-    await delay(700);
-    const lowerCaseStatuses = statuses.map((s) => s.toLowerCase());
-    const filtered = mockDb.appointments.service.filter((a) =>
-      lowerCaseStatuses.includes(a.status.toLowerCase())
-    );
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = filtered.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: filtered.length,
-        page,
-        perPage,
-        pages: Math.ceil(filtered.length / perPage),
-      },
-    };
-  },
-
-  getRoadsideAppointments: async (
-    statuses: string[],
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<RoadsideAppointment>> => {
-    await delay(650);
-    const lowerCaseStatuses = statuses.map((s) => s.toLowerCase());
-    const filtered = mockDb.appointments.road.filter((a) =>
-      lowerCaseStatuses.includes(a.status.toLowerCase())
-    );
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = filtered.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: filtered.length,
-        page,
-        perPage,
-        pages: Math.ceil(filtered.length / perPage),
-      },
-    };
-  },
-
   getInvoices: async (
     page = 1,
     perPage = 10
@@ -275,76 +142,6 @@ const mockApi = {
     };
   },
 
-  getTechnicians: async (
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<Technician>> => {
-    await delay(500);
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = mockDb.technicians.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: mockDb.technicians.length,
-        page,
-        perPage,
-        pages: Math.ceil(mockDb.technicians.length / perPage),
-      },
-    };
-  },
-
-  getTechniciansWithAvailability: async (): Promise<
-    (Technician & { availability?: TechnicianAvailability })[]
-  > => {
-    await delay(500);
-    return mockDb.technicians.map((tech) => ({
-      ...tech,
-      availability: mockDb.technicianAvailabilities.find(
-        (avail) => avail.technicianId === tech.id
-      ),
-    }));
-  },
-
-  assignTechnician: async (
-    appointmentId: string,
-    techId: string
-  ): Promise<ServiceAppointment> => {
-    await delay(1000);
-    const appointment = mockDb.appointments.service.find(
-      (a) => a.id === appointmentId
-    );
-    const tech = mockDb.technicians.find((t) => t.id === techId);
-    if (!appointment || !tech) {
-      throw new Error("Appointment or Technician not found");
-    }
-    appointment.assignedTech = { id: tech.id, name: tech.name };
-    appointment.status = ServiceAppointmentStatus.ASSIGNED;
-    return { ...appointment };
-  },
-  assignRoadsideTechnician: async (
-    ticketNo: string,
-    techId: string
-  ): Promise<RoadsideAppointment> => {
-    await delay(600);
-    const roadAppt = mockDb.appointments.road.find(
-      (a) => a.ticketNo === ticketNo || a.id === ticketNo
-    );
-    const tech = mockDb.technicians.find((t) => t.id === techId);
-    if (!roadAppt || !tech) {
-      throw new Error("Roadside appointment or Technician not found");
-    }
-    roadAppt.assignedTech = { id: tech.id, name: tech.name };
-    roadAppt.status = RoadsideAppointmentStatus.ASSIGNED;
-    tech.roadAssistAssignments = tech.roadAssistAssignments || [];
-    tech.roadAssistAssignments.push({
-      roadAssistId: roadAppt.ticketNo,
-      assignedAt: new Date().toISOString(),
-      status: "ASSIGNED",
-    });
-    return { ...roadAppt };
-  },
-
   getMyAppointments: async (
     techId: string,
     _status: "today" | "upcoming" | "completed"
@@ -356,103 +153,6 @@ const mockApi = {
     return mockDb.appointments.service.filter((a) =>
       a.assignedTech?.name.includes(employee?.firstName || "")
     );
-  },
-
-  getServices: async (
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<Service>> => {
-    await delay(400);
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = mockDb.services.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: mockDb.services.length,
-        page,
-        perPage,
-        pages: Math.ceil(mockDb.services.length / perPage),
-      },
-    };
-  },
-
-  addService: async (serviceData: Omit<Service, "id">): Promise<Service> => {
-    await delay(500);
-    const newService: Service = {
-      ...serviceData,
-      id: `svc-${Date.now()}`,
-    };
-    mockDb.services.unshift(newService);
-    return newService;
-  },
-
-  deleteService: async (id: string): Promise<void> => {
-    await delay(500);
-    const index = mockDb.services.findIndex((s) => s.id === id);
-    if (index > -1) {
-      mockDb.services.splice(index, 1);
-    } else {
-      throw new Error("Service not found");
-    }
-  },
-
-  getProducts: async (
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<Product>> => {
-    await delay(550);
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = mockDb.products.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: mockDb.products.length,
-        page,
-        perPage,
-        pages: Math.ceil(mockDb.products.length / perPage),
-      },
-    };
-  },
-
-  addProduct: async (productData: Omit<Product, "id">): Promise<Product> => {
-    await delay(500);
-    const newProduct: Product = {
-      ...productData,
-      id: `prod-${Date.now()}`,
-    };
-    mockDb.products.unshift(newProduct);
-    return newProduct;
-  },
-
-  deleteProduct: async (id: string): Promise<void> => {
-    await delay(500);
-    const index = mockDb.products.findIndex((p) => p.id === id);
-    if (index > -1) {
-      mockDb.products.splice(index, 1);
-    } else {
-      throw new Error("Product not found");
-    }
-  },
-
-  getAuditLogs: async (
-    page = 1,
-    perPage = 10
-  ): Promise<PaginatedResponse<AuditLog>> => {
-    await delay(300);
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    const paginatedData = mockDb.auditLogs.slice(start, end);
-    return {
-      data: paginatedData,
-      meta: {
-        total: mockDb.auditLogs.length,
-        page,
-        perPage,
-        pages: Math.ceil(mockDb.auditLogs.length / perPage),
-      },
-    };
   },
 
   getServiceAppointmentById: async (
@@ -1359,7 +1059,8 @@ const realApi = {
 };
 
 // --- EXPORTED SERVICES ---
-const api = USE_MOCK ? mockApi : realApi;
+const api =
+  USE_MOCK ? ({ ...realApi, ...mockApi } as typeof realApi) : realApi;
 
 export const authService = {
   login: api.login,
@@ -1415,7 +1116,6 @@ export const adminService = {
     assertRealAdminApi();
     return realAdminProductsApi.deleteProduct(id);
   },
-  getAuditLogs: api.getAuditLogs,
 };
 
 export const managerService = {
