@@ -25,3 +25,15 @@ var/
 .vscode/
 node_modules/
 
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.git
+.gitignore
+node_modules/
+staticfiles/
+media/
+docker-compose*.yml
+Dockerfile

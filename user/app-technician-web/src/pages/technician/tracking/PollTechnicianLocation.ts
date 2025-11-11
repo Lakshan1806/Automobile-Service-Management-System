@@ -3,6 +3,12 @@ import axios from "axios";
 
 type LatLng = { lat: number; lng: number };
 
+const LOCATION_API_BASE = (
+  (import.meta.env.VITE_LOCATION_API_URL as string | undefined) ??
+  (import.meta.env.VITE_LOCATION_API_BASE_URL as string | undefined) ??
+  "http://localhost:5010"
+).replace(/\/$/, "");
+
 function useLocationWatcher({ requestId, technicianId }: { requestId: string; technicianId: string }) {
   const [location, setLocation] = useState<LatLng>({ lat: 0, lng: 0 });
 
@@ -13,8 +19,7 @@ function useLocationWatcher({ requestId, technicianId }: { requestId: string; te
       return;
     }
 
-    const base = (import.meta.env.VITE_LOCATION_API_BASE_URL as string || "").replace(/\/$/, "");
-    const url = `${base}/api/location`;
+    const url = `${LOCATION_API_BASE}/api/location`;
 
     const watchId = navigator.geolocation.watchPosition(
       async (pos) => {
@@ -44,4 +49,3 @@ function useLocationWatcher({ requestId, technicianId }: { requestId: string; te
 }
 
 export { useLocationWatcher };
-

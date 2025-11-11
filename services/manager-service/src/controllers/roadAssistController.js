@@ -2,6 +2,24 @@ import mongoose from 'mongoose';
 import RoadAssist from '../models/RoadAssist.js';
 import Technician from '../models/Technician.js';
 import { syncRoadAssistData } from '../services/roadAssistService.js';
+import { locationApi } from '../utils/locationServiceClient.js';
+
+const normalizeStatus = (status) => {
+  const value = typeof status === 'string' ? status.toLowerCase() : '';
+  if (['in-progress', 'in_progress', 'assigned'].includes(value)) {
+    return 'in-progress';
+  }
+  if (value === 'completed') {
+    return 'completed';
+  }
+  return 'pending';
+};
+
+async function updateRemoteAssignment(requestId, technicianId) {
+  const path = `/api/roadside/requests/${encodeURIComponent(requestId)}/assign`;
+  const response = await locationApi.patch(path, { technicianId });
+  return response.data;
+}
 
 /**
  * Get all road assist appointments
@@ -85,6 +103,14 @@ export const assignTechnician = async (req, res) => {
       });
     }
 
+    const trimmedCustomId = customId?.trim();
+    if (!trimmedCustomId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Road assist customId is required'
+      });
+    }
+
     // 1. Get technician details
     const technician = await Technician.findOne({ technicianId });
     if (!technician) {
@@ -94,26 +120,37 @@ export const assignTechnician = async (req, res) => {
       });
     }
 
-    // 2. Update RoadAssist document using customId
-    console.log('Looking up road assist with customId:', customId);
-    console.log('Technician ID to assign:', technicianId);
-    
-    const roadAssist = await RoadAssist.findOneAndUpdate(
-      { customId: customId.trim() },
-      {
-        assignedTechnician: technicianId,
-        assignedTechnicianName: `${technician.firstName} ${technician.lastName}`,
-        status: 'in-progress'
-      },
-      { new: true }
-    );
-    
+    // 2. Fetch the road assist entry to ensure we have the latest IDs
+    const roadAssist = await RoadAssist.findOne({ customId: trimmedCustomId });
     if (!roadAssist) {
       return res.status(404).json({
         success: false,
         message: 'Road assist appointment not found'
       });
     }
+
+    // 3. Update location-service so the canonical record knows about the assignment
+    let remoteAssignment;
+    try {
+      remoteAssignment = await updateRemoteAssignment(trimmedCustomId, technicianId);
+    } catch (error) {
+      console.error('Failed to update location service assignment:', error?.response?.data || error.message);
+      const statusCode = error?.response?.status ?? 502;
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Unable to update remote assignment';
+      return res.status(statusCode).json({
+        success: false,
+        message,
+      });
+    }
+
+    // 4. Update local RoadAssist document
+    roadAssist.assignedTechnician = technicianId;
+    roadAssist.assignedTechnicianName = `${technician.firstName} ${technician.lastName}`;
+    roadAssist.status = normalizeStatus(remoteAssignment?.status || 'in-progress');
+    await roadAssist.save();
 
     // 3. Update Technician document with road assist assignment
     await Technician.findOneAndUpdate(

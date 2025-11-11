@@ -107,6 +107,41 @@ services:
       - ./services/location-service/.env
   # --- We are NOT running the frontend in Docker ---
 
+  #   # --- 9. Admin Service (Django) ---
+  # admin-service:
+  #   build:
+  #     context: ./services/admin_service
+  #   ports:
+  #     - "8000:8000"  
+      
+  #   env_file:
+  #   - ./services/admin_service/.env   # <— load vars from this file
+  #              # same external port as your local run
+  #   environment:
+  #     # Django basics
+  #     - DJANGO_DEBUG=1
+  #     - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-devsecret}
+  #     - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,admin-service
+
+  #     # DB selection (leave as sqlite to avoid changing behavior)
+  #     - DB_ENGINE=${DB_ENGINE:-sqlite}   # sqlite | postgres | mysql
+  #     - DB_NAME=${DB_NAME:-/app/db.sqlite3}
+  #     - DB_HOST=${DB_HOST:-}
+  #     - DB_PORT=${DB_PORT:-}
+  #     - DB_USER=${DB_USER:-}
+  #     - DB_PASSWORD=${DB_PASSWORD:-}
+
+  #     # Example of talking to other containers by service name (if needed later)
+  #     - AUTH_SERVICE_URL=http://auth-service:9000
+  #     - USER_SERVICE_URL=http://user-service:5001
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+  #   depends_on:
+  #     - kafka
+  #     - postgres-db
+  #     - mongo-db
+  #   volumes:
+  #     - ./services/admin_service:/app  # hot-reload: edit code on host, container updates
+
 volumes:
   postgres-data:
   mongo-data: 
