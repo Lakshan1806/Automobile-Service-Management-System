@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { RoadsideAppointment, RoadsideAppointmentStatus } from '../../types';
 import StatusChip from '../../components/ui/StatusChip';
 import { PhoneIcon, MapPinIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
 
 const statusTransitions: { [key in RoadsideAppointmentStatus]?: RoadsideAppointmentStatus } = {
     [RoadsideAppointmentStatus.ASSIGNED]: RoadsideAppointmentStatus.EN_ROUTE,
@@ -93,14 +94,23 @@ const RoadsidePage: React.FC = () => {
                                 <PhoneIcon className="h-4 w-4 mr-2" />
                                 Call Customer
                             </a>
-                             {statusActions[job.status] && (
-                                <button
-                                    onClick={() => handleStatusUpdate(job.id, job.status)} 
-                                    className="bg-brand-gold text-brand-blue-dark px-4 py-2 rounded-md hover:bg-brand-gold-dark text-sm font-semibold inline-flex items-center">
-                                    {statusActions[job.status]}
-                                    <ArrowRightIcon className="h-4 w-4 ml-2" />
-                                </button>
-                            )}
+                            <div className="flex items-center space-x-3">
+                              <Link
+                                to={`/technician/track/${job.id}`}
+                                className="bg-white border border-brand-blue text-brand-blue px-3 py-2 rounded-md hover:bg-gray-50 text-sm font-semibold inline-flex items-center"
+                              >
+                                <MapPinIcon className="h-4 w-4 mr-2" />
+                                Track
+                              </Link>
+                              {statusActions[job.status] && (
+                                  <button
+                                      onClick={() => handleStatusUpdate(job.id, job.status)} 
+                                      className="bg-brand-gold text-brand-blue-dark px-4 py-2 rounded-md hover:bg-brand-gold-dark text-sm font-semibold inline-flex items-center">
+                                      {statusActions[job.status]}
+                                      <ArrowRightIcon className="h-4 w-4 ml-2" />
+                                  </button>
+                              )}
+                            </div>
                         </div>
                     </div>
                 ))}

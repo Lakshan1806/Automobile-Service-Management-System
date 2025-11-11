@@ -41,6 +41,7 @@ import TechnicianCalendarPage from './pages/technician/TechnicianCalendarPage';
 import TimesheetsPage from './pages/technician/TimesheetsPage';
 import ProfilePage from './pages/technician/ProfilePage';
 import ToastContainer from './components/ui/ToastContainer';
+import TrackPage from './pages/technician/TrackPage';
 
 
 const ProtectedRoute: React.FC<{ roles: Role[]; children: React.ReactNode }> = ({ roles, children }) => {
@@ -107,6 +108,7 @@ function AppRoutes() {
         <Route path="appointments" element={<MyAppointmentsPage />} />
         <Route path="appointments/:appointmentId" element={<AppointmentDetailPage />} />
         <Route path="roadside" element={<RoadsidePage />} />
+        <Route path="track/:requestId" element={<TrackPage />} />
         <Route path="calendar" element={<TechnicianCalendarPage />} />
         <Route path="timesheets" element={<TimesheetsPage />} />
         <Route path="profile" element={<ProfilePage />} />

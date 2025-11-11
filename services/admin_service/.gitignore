@@ -1,6 +1,6 @@
 .env
 enterprise/
-
+venv/
 # Python cache
 **/__pycache__/
 *.pyc
@@ -9,3 +9,7 @@ enterprise/
 # Pytest
 .cache/
 .pytest_cache/
+
+pyvenv.cfg
+
+pyvenv.cfg
