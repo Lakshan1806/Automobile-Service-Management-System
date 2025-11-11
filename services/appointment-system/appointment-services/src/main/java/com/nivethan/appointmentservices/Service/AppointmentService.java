@@ -150,8 +150,17 @@ public class AppointmentService {
 
         } catch (Exception e) {
             log.error("Error creating appointment for vehicle ID: {}", requestDto.getVehicleId(), e);
-            
-            // --- NEW KAFKA LOGIC (using the template) ---
+
+            // --- 👇 THIS IS THE FIX 👇 ---
+            // Safely get the error message
+            String errorMessage = "Failed to create appointment.";
+            if (e.getMessage() != null) {
+                // Only get the substring if the message is not null
+                errorMessage = e.getMessage().substring(0, Math.min(e.getMessage().length(), 255));
+            } else if (e instanceof AccessDeniedException) {
+                errorMessage = "Access Denied.";
+            }
+
             auditProducer.sendFailureEvent(
                     "APPOINTMENT_FAILED",
                     traceId,
@@ -159,9 +168,9 @@ public class AppointmentService {
                             "vehicleId", requestDto.getVehicleId(),
                             "repairType", requestDto.getRepairType()
                     ),
-                    e.getMessage().substring(0, Math.min(e.getMessage().length(), 255))
+                    errorMessage // Use the safe error message
             );
-            // --- END ---
+            // --- 👆 END OF FIX 👆 ---
             if (e instanceof AccessDeniedException) { throw (AccessDeniedException) e; } // Re-throw
             throw new RuntimeException("Failed to create appointment: " + e.getMessage());
         }
