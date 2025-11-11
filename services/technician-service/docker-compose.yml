@@ -9,12 +9,46 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    networks:
+      - technician-network
+
+  technician-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: technician-service
+    restart: unless-stopped
+    ports:
+      - "3016:3016"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/technician-management
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+    networks:
+      - technician-network
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+
   # optional: mongodb express for UI
   # mongo-express:
   #   image: mongo-express
+  #   container_name: tms-mongo-express
   #   environment:
   #     ME_CONFIG_MONGODB_SERVER: mongo
   #   ports:
   #     - "8081:8081"
+  #   depends_on:
+  #     - mongo
+  #   networks:
+  #     - technician-network
+
 volumes:
   mongo-data:
+
+networks:
+  technician-network:
+    driver: bridge
