@@ -7,7 +7,7 @@ const REQUIRED_FETCH_ERROR =
 
 class AuthServiceClient {
   constructor({ baseUrl, timeoutMs = 5000 } = {}) {
-    this.baseUrl = baseUrl?.replace(/\/$/, "");
+    this.baseUrl = baseUrl?.toString().trim().replace(/\/$/, "");
     this.timeoutMs = timeoutMs;
     if (typeof fetch === "undefined") {
       throw new Error(REQUIRED_FETCH_ERROR);
@@ -39,6 +39,44 @@ class AuthServiceClient {
       return response.json();
     } catch (error) {
       console.error("Failed to fetch customer details from auth-service", error);
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async updateMe({ name, email }, authHeader) {
+    if (!this.baseUrl) {
+      return null;
+    }
+    const tokenHeader = typeof authHeader === "string" && authHeader.trim().length > 0
+      ? authHeader.trim()
+      : null;
+    if (!tokenHeader) {
+      // Cannot call /me without the customer's token
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const response = await fetch(`${this.baseUrl}/api/customers/me`, {
+        method: "PUT",
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: tokenHeader,
+        },
+        body: JSON.stringify({ name, email }),
+      });
+      if (!response.ok) {
+        console.warn(`Auth service update responded with ${response.status}`);
+        return null;
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Failed to update customer details on auth-service", error);
       return null;
     } finally {
       clearTimeout(timeout);

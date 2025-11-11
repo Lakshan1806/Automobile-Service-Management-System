@@ -1,29 +1,26 @@
-FROM python:3.11-slim
+# services/admin_service/Dockerfile
 
-# Prevent Python from writing .pyc files and enable unbuffered output
+FROM python:3.12-slim
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
+
+# + pkg-config + default-libmysqlclient-dev to build mysqlclient
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc pkg-config default-libmysqlclient-dev libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# System deps for building and mysqlclient
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       build-essential gcc pkg-config default-libmysqlclient-dev \
-    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt /app/
+RUN python -m pip install --upgrade pip && pip install -r requirements.txt
 
-# Install Python dependencies first (better layer caching)
-COPY requirements.txt ./
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+COPY . /app
 
-# Copy project files
-COPY . .
-
-# Entrypoint handles migrations then starts the server
-RUN chmod +x ./entrypoint.sh
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && sed -i 's/\r$//' /entrypoint.sh
 
 EXPOSE 8000
-
-CMD ["./entrypoint.sh"]
-
+ENTRYPOINT ["/entrypoint.sh"]

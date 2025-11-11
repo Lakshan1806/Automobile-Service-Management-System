@@ -150,4 +150,6 @@ AUTH_JWKS_CACHE_SECONDS = int(os.getenv("AUTH_JWKS_CACHE_SECONDS", 300))
 
 EMPLOYEE_INVITE_BASE_URL = os.getenv("EMPLOYEE_INVITE_BASE_URL", "http://localhost:5173/create-password")
 
+NOTIFICATION_SERVICE_BASE_URL = "http://localhost:8001/api/notification/send/"
+
 

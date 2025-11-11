@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Protected } from "@/app/auth/Protected";
 import { useAuth } from "@/app/auth/AuthContext";
+import { fetchCustomerDetails, type CustomerDetails } from "@/app/auth/auth";
 import {
   cacheVehicles,
   fetchCustomerVehicles,
@@ -14,6 +15,7 @@ import { userApi } from "@/app/auth/api";
 type GarageVehicle = {
   vehicleId: string;
   numberPlate: string;
+  chassisNo?: string | null;
   vehicleBrand: string;
   vehicleModel: string;
   vehicleType?: string | null;
@@ -59,9 +61,15 @@ const initialForm: VehicleForm = {
 function customerVehicleToGarage(vehicle: CustomerVehicle): GarageVehicle {
   return {
     vehicleId: vehicle.vehicleId,
-    numberPlate: vehicle.noPlate,
+    numberPlate: vehicle.noPlate ?? vehicle.numberPlate ?? "",
+    chassisNo: vehicle.chassisNo ?? null,
     vehicleBrand: vehicle.vehicleBrand,
     vehicleModel: vehicle.vehicleModel,
+    vehicleType: vehicle.vehicleType ?? null,
+    vehicleModelYear: vehicle.vehicleModelYear ?? null,
+    vehicleRegistrationYear: vehicle.vehicleRegistrationYear ?? null,
+    mileage: vehicle.mileage ?? null,
+    lastServiceDate: vehicle.lastServiceDate ?? null,
   };
 }
 
@@ -103,6 +111,7 @@ function serverVehicleToGarage(vehicle: unknown): GarageVehicle {
   return {
     vehicleId,
     numberPlate,
+    chassisNo: typeof record.chassisNo === "string" ? record.chassisNo : null,
     vehicleBrand:
       typeof record.vehicleBrand === "string" ? record.vehicleBrand : "",
     vehicleModel:
@@ -126,13 +135,31 @@ function garageVehicleToCache(vehicle: GarageVehicle): CustomerVehicle {
   return {
     vehicleId: vehicle.vehicleId,
     noPlate: vehicle.numberPlate,
+    numberPlate: vehicle.numberPlate,
     vehicleBrand: vehicle.vehicleBrand,
     vehicleModel: vehicle.vehicleModel,
+    vehicleType: vehicle.vehicleType ?? null,
+    vehicleModelYear: vehicle.vehicleModelYear ?? null,
+    vehicleRegistrationYear: vehicle.vehicleRegistrationYear ?? null,
+    mileage: vehicle.mileage ?? null,
+    lastServiceDate: vehicle.lastServiceDate ?? null,
+    chassisNo: vehicle.chassisNo ?? null,
   };
 }
 
 function AccountContent() {
-  const { customer } = useAuth();
+  const { customer, refresh } = useAuth();
+  const [details, setDetails] = useState<CustomerDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsFeedback, setDetailsFeedback] = useState<null | { type: "success" | "error"; message: string }>(null);
+  const [detailsForm, setDetailsForm] = useState({
+    name: "",
+    email: "",
+    telephoneNumber: "",
+    address: "",
+  });
   const [vehicles, setVehicles] = useState<GarageVehicle[]>(() =>
     readCachedVehicles().map(customerVehicleToGarage),
   );
@@ -143,6 +170,9 @@ function AccountContent() {
     type: "success" | "error";
     message: string;
   }>(null);
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<VehicleForm>(initialForm);
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
     if (!customer?.id) {
@@ -150,6 +180,38 @@ function AccountContent() {
     }
 
     let active = true;
+    setDetailsLoading(true);
+    fetchCustomerDetails(customer.id)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+        setDetails(result);
+        if (result) {
+          setDetailsForm({
+            name: result.name ?? customer?.name ?? "",
+            email: result.email ?? customer?.email ?? "",
+            telephoneNumber: result.telephoneNumber ?? "",
+            address: result.address ?? "",
+          });
+        } else {
+          setDetailsForm({
+            name: customer?.name ?? "",
+            email: customer?.email ?? "",
+            telephoneNumber: "",
+            address: "",
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Unable to load customer details", error);
+      })
+      .finally(() => {
+        if (active) {
+          setDetailsLoading(false);
+        }
+      });
+
     setLoading(true);
     fetchCustomerVehicles(customer.id)
       .then((result) => {
@@ -186,6 +248,13 @@ function AccountContent() {
     value: VehicleForm[K],
   ) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleEditChange<K extends keyof VehicleForm>(
+    key: K,
+    value: VehicleForm[K],
+  ) {
+    setEditForm((current) => ({ ...current, [key]: value }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -257,6 +326,116 @@ function AccountContent() {
     }
   }
 
+  async function startEdit(vehicleId: string) {
+    try {
+      const { data } = await userApi.get<{ vehicle: unknown }>(
+        `/api/vehicles/${encodeURIComponent(vehicleId)}`,
+      );
+      const record = data?.vehicle as Record<string, unknown> | undefined;
+      if (!record) {
+        throw new Error("Vehicle not found");
+      }
+      const padDate = (d: string | null | undefined) => {
+        if (!d) return "";
+        const date = new Date(d);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toISOString().split("T")[0];
+      };
+      setEditForm({
+        numberPlate: (record.numberPlate as string) ?? "",
+        chassisNo: (record.chassisNo as string) ?? "",
+        vehicleBrand: (record.vehicleBrand as string) ?? "",
+        vehicleModel: (record.vehicleModel as string) ?? "",
+        vehicleType: ((record.vehicleType as string) ?? "CAR").toUpperCase(),
+        mileage:
+          typeof record.mileage === "number"
+            ? String(record.mileage)
+            : typeof record.mileage === "string"
+              ? record.mileage
+              : "",
+        vehicleModelYear:
+          typeof record.vehicleModelYear === "number"
+            ? String(record.vehicleModelYear)
+            : "",
+        vehicleRegistrationYear:
+          typeof record.vehicleRegistrationYear === "number"
+            ? String(record.vehicleRegistrationYear)
+            : "",
+        lastServiceDate: padDate(record.lastServiceDate as string | undefined),
+      });
+      setEditingVehicleId(vehicleId);
+    } catch (error) {
+      console.error("Failed to load vehicle for edit", error);
+      setFeedback({ type: "error", message: "Unable to load vehicle details for editing." });
+    }
+  }
+
+  async function handleUpdateVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingVehicleId) return;
+
+    setFeedback(null);
+    setEditSubmitting(true);
+    const payload = {
+      numberPlate: editForm.numberPlate.trim().toUpperCase(),
+      chassisNo: editForm.chassisNo.trim().toUpperCase(),
+      vehicleBrand: editForm.vehicleBrand.trim(),
+      vehicleModel: editForm.vehicleModel.trim(),
+      vehicleType: editForm.vehicleType,
+      mileage: editForm.mileage ? Number(editForm.mileage) : undefined,
+      vehicleModelYear: editForm.vehicleModelYear
+        ? Number(editForm.vehicleModelYear)
+        : undefined,
+      vehicleRegistrationYear: editForm.vehicleRegistrationYear
+        ? Number(editForm.vehicleRegistrationYear)
+        : undefined,
+      lastServiceDate: editForm.lastServiceDate || undefined,
+    };
+
+    try {
+      const { data } = await userApi.put<{ vehicle: unknown }>(
+        `/api/vehicles/${encodeURIComponent(editingVehicleId)}`,
+        payload,
+      );
+      const updated = serverVehicleToGarage(data.vehicle);
+      setVehicles((current) => {
+        const next = current.map((v) =>
+          v.vehicleId === updated.vehicleId ? { ...v, ...updated } : v,
+        );
+        cacheVehicles(next.map(garageVehicleToCache));
+        return next;
+      });
+      setEditingVehicleId(null);
+      setEditForm(initialForm);
+      setFeedback({ type: "success", message: "Vehicle updated successfully." });
+    } catch (error) {
+      console.error("Failed to update vehicle", error);
+      let message =
+        "We could not update that vehicle. Please review the details and try again.";
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response
+      ) {
+        const data = (error.response as { data?: unknown }).data;
+        if (
+          data &&
+          typeof data === "object" &&
+          "message" in data &&
+          typeof (data as { message?: unknown }).message === "string"
+        ) {
+          message = (data as { message: string }).message;
+        }
+      }
+      setFeedback({ type: "error", message });
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
   const totalVehicles = vehicles.length;
   const brandCount = useMemo(() => {
     return new Set(vehicles.map((vehicle) => vehicle.vehicleBrand)).size;
@@ -273,6 +452,133 @@ function AccountContent() {
             records help technicians verify ownership, dispatch roadside
             support, and tailor maintenance plans.
           </p>
+          <div className="form-card" aria-live="polite">
+            <p className="eyebrow">Your details</p>
+            <h2>Profile</h2>
+            {detailsLoading ? (
+              <p>Loading your details...</p>
+            ) : !editing ? (
+              <>
+                <div className="form-grid">
+                  <div className="form-field">
+                    <label>Name</label>
+                    <p>{details?.name ?? customer?.name ?? "Unknown"}</p>
+                  </div>
+                  <div className="form-field">
+                    <label>Email</label>
+                    <p>{details?.email ?? customer?.email ?? "Unknown"}</p>
+                  </div>
+                  <div className="form-field">
+                    <label>Phone</label>
+                    <p>{details?.telephoneNumber || "Not set"}</p>
+                  </div>
+                  <div className="form-field">
+                    <label>Address</label>
+                    <p>{details?.address || "Not set"}</p>
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button className="button" onClick={() => setEditing(true)}>
+                    Edit details
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!customer?.id) return;
+                  setDetailsFeedback(null);
+                  setSavingDetails(true);
+                  try {
+                    const payload = {
+                      name: detailsForm.name.trim(),
+                      email: detailsForm.email.trim(),
+                      telephoneNumber: detailsForm.telephoneNumber.trim(),
+                      address: detailsForm.address.trim(),
+                    };
+                    await userApi.put(
+                      `/api/customer-profiles/${encodeURIComponent(customer.id)}/details`,
+                      payload,
+                    );
+                    await refresh();
+                    const next = await fetchCustomerDetails(customer.id);
+                    setDetails(next);
+                    setDetailsFeedback({ type: "success", message: "Details updated successfully." });
+                    setEditing(false);
+                  } catch (error) {
+                    console.error("Failed to update details", error);
+                    let message = "Could not update details. Please review and try again.";
+                    if (
+                      error && typeof error === "object" && "response" in error && error.response &&
+                      typeof error.response === "object" && "data" in error.response
+                    ) {
+                      const data = (error.response as { data?: unknown }).data;
+                      if (data && typeof data === "object" && "message" in data && typeof (data as { message?: unknown }).message === "string") {
+                        message = (data as { message: string }).message;
+                      }
+                    }
+                    setDetailsFeedback({ type: "error", message });
+                  } finally {
+                    setSavingDetails(false);
+                  }
+                }}
+              >
+                <div className="form-grid">
+                  <div className="form-field">
+                    <label htmlFor="name">Name*</label>
+                    <input
+                      id="name"
+                      value={detailsForm.name}
+                      onChange={(e) => setDetailsForm((c) => ({ ...c, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="email">Email*</label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={detailsForm.email}
+                      onChange={(e) => setDetailsForm((c) => ({ ...c, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="telephoneNumber">Phone</label>
+                    <input
+                      id="telephoneNumber"
+                      value={detailsForm.telephoneNumber}
+                      onChange={(e) => setDetailsForm((c) => ({ ...c, telephoneNumber: e.target.value }))}
+                      placeholder="e.g. +1 555-0100"
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="address">Address</label>
+                    <input
+                      id="address"
+                      value={detailsForm.address}
+                      onChange={(e) => setDetailsForm((c) => ({ ...c, address: e.target.value }))}
+                      placeholder="Street, City, ZIP"
+                    />
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button className="button" type="button" onClick={() => setEditing(false)} disabled={savingDetails}>
+                    Cancel
+                  </button>
+                  <button className="button primary" type="submit" disabled={savingDetails}>
+                    {savingDetails ? "Saving..." : "Save changes"}
+                  </button>
+                </div>
+                {detailsFeedback && (
+                  <div className={`feedback ${detailsFeedback.type === "error" ? "error" : ""}`} role="status" aria-live="polite">
+                    {detailsFeedback.message}
+                  </div>
+                )}
+              </form>
+            )}
+          </div>
           <div className="stats-grid">
             <article>
               <p className="eyebrow">Vehicles on file</p>
@@ -465,36 +771,161 @@ function AccountContent() {
               : "Not recorded";
             return (
               <article key={vehicle.vehicleId} className="vehicle-card">
-                <div className="vehicle-header">
-                  <div>
-                    <h3>
-                      {vehicle.vehicleBrand} {vehicle.vehicleModel}
-                    </h3>
-                    <p>{vehicle.numberPlate}</p>
-                  </div>
-                  {vehicle.vehicleType && (
-                    <span className="primary-badge">{vehicle.vehicleType}</span>
-                  )}
-                </div>
-                <div className="vehicle-meta">
-                  <p>
-                    <strong>Model year:</strong>{" "}
-                    {vehicle.vehicleModelYear ?? "—"}
-                  </p>
-                  <p>
-                    <strong>Registration year:</strong>{" "}
-                    {vehicle.vehicleRegistrationYear ?? "—"}
-                  </p>
-                  <p>
-                    <strong>Mileage:</strong>{" "}
-                    {vehicle.mileage !== null && vehicle.mileage !== undefined
-                      ? `${vehicle.mileage.toLocaleString()} km`
-                      : "—"}
-                  </p>
-                  <p>
-                    <strong>Last service:</strong> {lastServiceLabel}
-                  </p>
-                </div>
+                {editingVehicleId === vehicle.vehicleId ? (
+                  <form onSubmit={handleUpdateVehicle}>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label htmlFor={`edit-numberPlate-${vehicle.vehicleId}`}>Number plate*</label>
+                        <input
+                          id={`edit-numberPlate-${vehicle.vehicleId}`}
+                          value={editForm.numberPlate}
+                          onChange={(e) =>
+                            handleEditChange("numberPlate", e.target.value.toUpperCase())
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-chassisNo-${vehicle.vehicleId}`}>Chassis / VIN*</label>
+                        <input
+                          id={`edit-chassisNo-${vehicle.vehicleId}`}
+                          value={editForm.chassisNo}
+                          onChange={(e) =>
+                            handleEditChange("chassisNo", e.target.value.toUpperCase())
+                          }
+                          minLength={11}
+                          maxLength={17}
+                          required
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-vehicleBrand-${vehicle.vehicleId}`}>Make / brand*</label>
+                        <input
+                          id={`edit-vehicleBrand-${vehicle.vehicleId}`}
+                          value={editForm.vehicleBrand}
+                          onChange={(e) => handleEditChange("vehicleBrand", e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-vehicleModel-${vehicle.vehicleId}`}>Model*</label>
+                        <input
+                          id={`edit-vehicleModel-${vehicle.vehicleId}`}
+                          value={editForm.vehicleModel}
+                          onChange={(e) => handleEditChange("vehicleModel", e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-vehicleType-${vehicle.vehicleId}`}>Vehicle type</label>
+                        <select
+                          id={`edit-vehicleType-${vehicle.vehicleId}`}
+                          value={editForm.vehicleType}
+                          onChange={(e) => handleEditChange("vehicleType", e.target.value)}
+                        >
+                          {VEHICLE_TYPES.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-vehicleModelYear-${vehicle.vehicleId}`}>Model year</label>
+                        <input
+                          id={`edit-vehicleModelYear-${vehicle.vehicleId}`}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editForm.vehicleModelYear}
+                          onChange={(e) => handleEditChange("vehicleModelYear", e.target.value)}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-vehicleRegistrationYear-${vehicle.vehicleId}`}>Registration year</label>
+                        <input
+                          id={`edit-vehicleRegistrationYear-${vehicle.vehicleId}`}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editForm.vehicleRegistrationYear}
+                          onChange={(e) => handleEditChange("vehicleRegistrationYear", e.target.value)}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-mileage-${vehicle.vehicleId}`}>Current mileage</label>
+                        <input
+                          id={`edit-mileage-${vehicle.vehicleId}`}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editForm.mileage}
+                          onChange={(e) => handleEditChange("mileage", e.target.value.replace(/\D/g, ""))}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor={`edit-lastServiceDate-${vehicle.vehicleId}`}>Last service date</label>
+                        <input
+                          id={`edit-lastServiceDate-${vehicle.vehicleId}`}
+                          type="date"
+                          value={editForm.lastServiceDate}
+                          onChange={(e) => handleEditChange("lastServiceDate", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-actions">
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => {
+                          setEditingVehicleId(null);
+                          setEditForm(initialForm);
+                        }}
+                        disabled={editSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      <button className="button primary" type="submit" disabled={editSubmitting}>
+                        {editSubmitting ? "Saving..." : "Save changes"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div className="vehicle-header">
+                      <div>
+                        <h3>
+                          {vehicle.vehicleBrand} {vehicle.vehicleModel}
+                        </h3>
+                        <p>{vehicle.numberPlate}</p>
+                      </div>
+                      {vehicle.vehicleType && (
+                        <span className="primary-badge">{vehicle.vehicleType}</span>
+                      )}
+                    </div>
+                    <div className="vehicle-meta">
+                      <p>
+                        <strong>Model year:</strong>{" "}
+                        {vehicle.vehicleModelYear ?? "—"}
+                      </p>
+                      <p>
+                        <strong>Registration year:</strong>{" "}
+                        {vehicle.vehicleRegistrationYear ?? "—"}
+                      </p>
+                      <p>
+                        <strong>Mileage:</strong>{" "}
+                        {vehicle.mileage !== null && vehicle.mileage !== undefined
+                          ? `${vehicle.mileage.toLocaleString()} km`
+                          : "—"}
+                      </p>
+                      <p>
+                        <strong>Last service:</strong> {lastServiceLabel}
+                      </p>
+                    </div>
+                    <div className="form-actions">
+                      <button className="button" onClick={() => startEdit(vehicle.vehicleId)}>
+                        Edit vehicle
+                      </button>
+                    </div>
+                  </>
+                )}
               </article>
             );
           })

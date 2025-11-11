@@ -68,6 +68,10 @@ const roadAssistSchema = new mongoose.Schema({
     ref: 'Technician',
     required: false
   },
+  assignedTechnicianName: {
+    type: String,
+    required: false
+  },
   notes: {
     type: String,
     required: false

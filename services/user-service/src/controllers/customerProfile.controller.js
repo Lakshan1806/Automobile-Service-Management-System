@@ -1,5 +1,6 @@
 import CustomerProfile from "../models/customerProfile.model.js";
 import Vehicle from "../models/vehicle.model.js";
+import authServiceClient from "../clients/authServiceClient.js";
 import { parseCustomerId } from "../utils/parsers.js";
 
 const CustomerProfileController = {
@@ -151,6 +152,129 @@ const CustomerProfileController = {
       }
       console.error("Failed to add vehicle for customer profile", error);
       return res.status(500).json({ message: "Unable to add vehicle" });
+    }
+  },
+
+  async getDetails(req, res) {
+    try {
+      const customerId = parseCustomerId(req.params.customerId);
+      if (customerId === null) {
+        return res
+          .status(400)
+          .json({ message: "customerId must be a valid number" });
+      }
+
+      const [profileDoc, authCustomer] = await Promise.all([
+        CustomerProfile.findOne({ customerId }).lean(),
+        authServiceClient.getCustomer(customerId),
+      ]);
+
+      const profile = profileDoc ?? { telephoneNumber: "", address: "" };
+
+      return res.status(200).json({
+        customer: {
+          id: customerId,
+          name: authCustomer?.name ?? null,
+          email: authCustomer?.email ?? null,
+          telephoneNumber: profile.telephoneNumber ?? "",
+          address: profile.address ?? "",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to fetch aggregated customer details", error);
+      return res
+        .status(500)
+        .json({ message: "Unable to fetch customer details" });
+    }
+  },
+
+  async updateDetails(req, res) {
+    try {
+      const customerId = parseCustomerId(req.params.customerId);
+      if (customerId === null) {
+        return res
+          .status(400)
+          .json({ message: "customerId must be a valid number" });
+      }
+
+      const {
+        name,
+        email,
+        telephoneNumber,
+        address,
+      } = req.body ?? {};
+
+      // Update auth-service if name/email are provided
+      let authCustomer = null;
+      const authz = req.get("authorization");
+
+      const wantsAuthUpdate =
+        (typeof name === "string" && name.trim().length > 0) ||
+        (typeof email === "string" && email.trim().length > 0);
+
+      if (wantsAuthUpdate) {
+        if (!authz) {
+          return res.status(401).json({ message: "Missing Authorization token" });
+        }
+        // Both fields are required by auth-service; enforce simplicity here
+        if (!name || !email) {
+          return res
+            .status(400)
+            .json({ message: "Both name and email are required to update profile" });
+        }
+        authCustomer = await authServiceClient.updateMe(
+          { name: name.trim(), email: email.trim() },
+          authz,
+        );
+        if (!authCustomer) {
+          return res
+            .status(502)
+            .json({ message: "Failed to update name/email on authentication service" });
+        }
+      }
+
+      // Update user-service profile fields if provided
+      const updates = {};
+      if (telephoneNumber !== undefined) {
+        if (typeof telephoneNumber !== "string" || telephoneNumber.trim().length === 0) {
+          return res
+            .status(400)
+            .json({ message: "telephoneNumber must be a non-empty string" });
+        }
+        updates.telephoneNumber = telephoneNumber.trim();
+      }
+      if (address !== undefined) {
+        if (typeof address !== "string" || address.trim().length === 0) {
+          return res.status(400).json({ message: "address must be a non-empty string" });
+        }
+        updates.address = address.trim();
+      }
+
+      let profileDoc = null;
+      if (Object.keys(updates).length > 0) {
+        profileDoc = await CustomerProfile.findOneAndUpdate(
+          { customerId },
+          { $set: updates },
+          { new: true, upsert: true },
+        ).lean();
+      } else {
+        profileDoc = await CustomerProfile.findOne({ customerId }).lean();
+      }
+
+      const profile = profileDoc ?? { telephoneNumber: "", address: "" };
+
+      return res.status(200).json({
+        customer: {
+          id: customerId,
+          name: wantsAuthUpdate ? authCustomer?.name ?? null : undefined,
+          email: wantsAuthUpdate ? authCustomer?.email ?? null : undefined,
+          telephoneNumber: profile.telephoneNumber ?? "",
+          address: profile.address ?? "",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to update aggregated customer details", error);
+      return res.status(500).json({ message: "Unable to update customer details" });
     }
   },
 };

@@ -15,6 +15,21 @@ export type CustomerVehicle = {
   noPlate: string;
   vehicleBrand: string;
   vehicleModel: string;
+  numberPlate?: string;
+  vehicleType?: string | null;
+  vehicleModelYear?: number | null;
+  vehicleRegistrationYear?: number | null;
+  mileage?: number | null;
+  lastServiceDate?: string | null;
+  chassisNo?: string | null;
+};
+
+export type CustomerDetails = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  telephoneNumber: string;
+  address: string;
 };
 
 
@@ -75,6 +90,41 @@ export async function fetchCustomerVehicles(
     `/api/customers/${encodeURIComponent(customerId)}/vehicles`,
   );
   return data ?? [];
+}
+
+export async function fetchCustomerDetails(
+  customerId: string,
+): Promise<CustomerDetails | null> {
+  if (!customerId) {
+    return null;
+  }
+  const { data } = await userApi.get<{ customer: unknown }>(
+    `/api/customer-profiles/${encodeURIComponent(customerId)}/details`,
+  );
+
+  if (!data || typeof data !== "object" || !("customer" in data)) {
+    return null;
+  }
+  const payload = (data as { customer: Record<string, unknown> }).customer;
+  const idCandidate = payload.id;
+  const id =
+    typeof idCandidate === "string"
+      ? idCandidate
+      : typeof idCandidate === "number"
+        ? String(idCandidate)
+        : "";
+
+  return {
+    id,
+    name: (payload.name as string | null) ?? null,
+    email: (payload.email as string | null) ?? null,
+    telephoneNumber:
+      typeof payload.telephoneNumber === "string"
+        ? payload.telephoneNumber
+        : "",
+    address:
+      typeof payload.address === "string" ? payload.address : "",
+  };
 }
 
 export async function signin(payload: SigninPayload): Promise<SigninResponse> {

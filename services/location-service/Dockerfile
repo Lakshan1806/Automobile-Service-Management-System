@@ -5,5 +5,5 @@ ENV CHOKIDAR_USEPOLLING=true
 COPY package.json package-lock.json ./
 RUN npm install
 COPY . .
-EXPOSE 5000
+EXPOSE 5010
 CMD ["npm", "run", "dev"]

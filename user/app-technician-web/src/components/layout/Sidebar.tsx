@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Role } from '../../types';
-import { WrenchScrewdriverIcon, UsersIcon, BuildingStorefrontIcon, CalendarDaysIcon, DocumentChartBarIcon, UserGroupIcon, Cog8ToothIcon, ArchiveBoxIcon, TruckIcon, CurrencyDollarIcon, IdentificationIcon, UserCircleIcon, DocumentCheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { WrenchScrewdriverIcon, UsersIcon, BuildingStorefrontIcon, CalendarDaysIcon, DocumentChartBarIcon, UserGroupIcon, Cog8ToothIcon, ArchiveBoxIcon, TruckIcon, CurrencyDollarIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -26,16 +26,12 @@ const managerNav = [
   { name: 'Assigned Appointments', to: '/manager/appointments/service/assigned', icon: <WrenchScrewdriverIcon className="h-6 w-6 mr-3 text-green-400" /> },
   { name: 'Roadside Assist', to: '/manager/roadside', icon: <TruckIcon className={iconClass} /> },
   { name: 'Invoices', to: '/manager/invoices', icon: <CurrencyDollarIcon className={iconClass} /> },
-  { name: 'Customers', to: '/manager/customers', icon: <IdentificationIcon className={iconClass} /> },
 ];
 
 const technicianNav = [
   { name: 'Dashboard', to: '/technician', icon: <DocumentChartBarIcon className={iconClass} /> },
   { name: 'My Appointments', to: '/technician/appointments', icon: <CalendarDaysIcon className={iconClass} /> },
   { name: 'Roadside', to: '/technician/roadside', icon: <TruckIcon className={iconClass} /> },
-  { name: 'Calendar', to: '/technician/calendar', icon: <CalendarDaysIcon className={iconClass} /> },
-  { name: 'Timesheets', to: '/technician/timesheets', icon: <DocumentCheckIcon className={iconClass} /> },
-  { name: 'Profile', to: '/technician/profile', icon: <UserCircleIcon className={iconClass} /> },
 ];
 
 const navLinks = {

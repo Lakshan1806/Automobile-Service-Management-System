@@ -1,8 +1,18 @@
-import axios from 'axios';
 import mongoose from 'mongoose';
 import RoadAssist from '../models/RoadAssist.js';
+import { locationApi, locationServiceBaseUrl } from '../utils/locationServiceClient.js';
 
-const API_URL = 'http://localhost:5000/api/roadassist';
+const API_URL = `${locationServiceBaseUrl}/api/roadside/requests`;
+const normalizeStatus = (status) => {
+  const value = typeof status === 'string' ? status.toLowerCase() : '';
+  if (['in-progress', 'in_progress', 'assigned'].includes(value)) {
+    return 'in-progress';
+  }
+  if (value === 'completed') {
+    return 'completed';
+  }
+  return 'pending';
+};
 
 /**
  * Fetches road assist data from the external API
@@ -10,8 +20,8 @@ const API_URL = 'http://localhost:5000/api/roadassist';
  */
 const fetchRoadAssistData = async () => {
   try {
-    console.log('Fetching road assist data from external API...');
-    const response = await axios.get(API_URL);
+    console.log(`Fetching road assist data from ${API_URL} ...`);
+    const response = await locationApi.get('/api/roadside/requests');
     console.log(`Successfully fetched ${response.data.length} road assist records`);
     return response.data;
   } catch (error) {
@@ -39,29 +49,47 @@ const saveRoadAssistData = async (data) => {
 
     // Process each record
     const processedData = data.map(item => {
-      // Create a new object with only the fields that exist in the schema
-      // and ensure required fields have values
+      const vehicle = item.vehicle || {};
+      const customer = item.customer || {};
+
       return {
-        vehicleId: item.vehicleId || new mongoose.Types.ObjectId().toString(),
-        vehicleNo: item.vehicleNo || 'UNKNOWN',
-        customerId: item.customerId || new mongoose.Types.ObjectId().toString(),
-        customerName: item.customerName || 'Unknown Customer',
+        customId:
+          item.customId ||
+          item.reference ||
+          item.id ||
+          new mongoose.Types.ObjectId().toString(),
+        vehicleId:
+          vehicle.id ||
+          item.vehicleId ||
+          new mongoose.Types.ObjectId().toString(),
+        vehicleNo:
+          vehicle.numberPlate ||
+          item.vehicleNo ||
+          'UNKNOWN',
+        customerId:
+          customer.id ||
+          item.customerId ||
+          new mongoose.Types.ObjectId().toString(),
+        customerName:
+          customer.name ||
+          item.customerName ||
+          'Unknown Customer',
         customerPhone: item.customerPhone || 'N/A',
         currentLocation: item.currentLocation || 'Location not specified',
         description: item.description || 'No description provided',
-        serviceType: item.serviceType || 'multi-service',
-        requestDate: item.requestDate || new Date(),
-        status: item.status || 'pending',
+        serviceType: 'multi-service',
+        requestDate: item.requestDate || item.createdAt || new Date(),
+        status: normalizeStatus(item.status),
         ...(item.assignedTechnician && { assignedTechnician: item.assignedTechnician }),
         ...(item.notes && { notes: item.notes })
       };
     });
 
-    // Get all existing vehicleIds to prevent duplicates
-    const existingVehicleIds = (await RoadAssist.find({}, 'vehicleId')).map(doc => doc.vehicleId);
+    // Get all existing customIds to prevent duplicates
+    const existingCustomIds = (await RoadAssist.find({}, 'customId')).map(doc => doc.customId);
     
     // Filter out records that already exist
-    const newRecords = processedData.filter(doc => !existingVehicleIds.includes(doc.vehicleId));
+    const newRecords = processedData.filter(doc => !existingCustomIds.includes(doc.customId));
     
     if (newRecords.length === 0) {
       console.log('No new road assist records to add');

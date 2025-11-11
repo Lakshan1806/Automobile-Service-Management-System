@@ -28,7 +28,6 @@ import ServiceAppointmentsPage from './pages/manager/ServiceAppointmentsPage';
 import AssignedServiceAppointmentsPage from './pages/manager/AssignedServiceAppointmentsPage';
 import RoadsideAssistPage from './pages/manager/RoadsideAssistPage';
 import InvoicesPage from './pages/manager/InvoicesPage';
-import CustomersPage from './pages/manager/CustomersPage';
 import TechniciansPage from './pages/manager/TechniciansPage';
 
 
@@ -37,9 +36,6 @@ import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import MyAppointmentsPage from './pages/technician/MyAppointmentsPage';
 import AppointmentDetailPage from './pages/technician/AppointmentDetailPage';
 import RoadsidePage from './pages/technician/RoadsidePage';
-import TechnicianCalendarPage from './pages/technician/TechnicianCalendarPage';
-import TimesheetsPage from './pages/technician/TimesheetsPage';
-import ProfilePage from './pages/technician/ProfilePage';
 import ToastContainer from './components/ui/ToastContainer';
 import TrackPage from './pages/technician/TrackPage';
 
@@ -95,7 +91,6 @@ function AppRoutes() {
         <Route path="appointments/service/assigned" element={<AssignedServiceAppointmentsPage />} />
         <Route path="roadside" element={<RoadsideAssistPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
-        <Route path="customers" element={<CustomersPage />} />
         <Route path="technicians" element={<TechniciansPage />} />
       </Route>
       
@@ -109,9 +104,6 @@ function AppRoutes() {
         <Route path="appointments/:appointmentId" element={<AppointmentDetailPage />} />
         <Route path="roadside" element={<RoadsidePage />} />
         <Route path="track/:requestId" element={<TrackPage />} />
-        <Route path="calendar" element={<TechnicianCalendarPage />} />
-        <Route path="timesheets" element={<TimesheetsPage />} />
-        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       <Route path="/select-branch" element={<SelectBranchPage />} />
