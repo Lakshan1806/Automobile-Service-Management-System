@@ -1,5 +1,5 @@
 import express from 'express';
-import { getRoadAssists, syncRoadAssists, assignTechnician } from '../controllers/roadAssistController.js';
+import { getRoadAssists, getRoadAssistsByTechnician, syncRoadAssists, assignTechnician } from '../controllers/roadAssistController.js';
 import RoadAssist from '../models/RoadAssist.js';
 
 const router = express.Router();
@@ -8,6 +8,11 @@ const router = express.Router();
 // @route   GET /api/roadassists
 // @access  Public
 router.get('/', getRoadAssists);
+
+// @desc    Get road assists assigned to a specific technician
+// @route   GET /api/roadassists/assigned/:technicianId
+// @access  Public
+router.get('/assigned/:technicianId', getRoadAssistsByTechnician);
 
 // @desc    Sync road assist data from external API
 // @route   GET /api/roadassists/sync

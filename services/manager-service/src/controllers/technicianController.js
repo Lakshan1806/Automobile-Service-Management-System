@@ -20,6 +20,13 @@ export const syncTechnicians = async () => {
 
     console.log(`Found ${technicians.length} technicians to sync`);
 
+    // Fetch existing technicians to preserve assignment metadata
+    const existingTechnicians = await Technician.find({});
+    const technicianMap = existingTechnicians.reduce((acc, tech) => {
+      acc.set(tech.technicianId, tech);
+      return acc;
+    }, new Map());
+
     // Process each technician to ensure required fields
     const processedTechs = technicians.map(tech => {
       const externalId =
@@ -29,7 +36,20 @@ export const syncTechnicians = async () => {
         (tech._id ? tech._id.toString() : null) ||
         new mongoose.Types.ObjectId().toString();
 
-      return {
+      const existing = technicianMap.get(externalId.toString());
+      const preservedAssignedTasks = existing?.assignedTasks?.length
+        ? existing.assignedTasks
+        : [];
+      const preservedRoadAssignments = existing?.roadAssistAssignments?.length
+        ? existing.roadAssistAssignments
+        : [];
+
+      // Avoid overwriting local assignment tracking when the upstream payload lacks these fields
+      const {
+        assignedTasks: incomingAssignedTasks,
+        roadAssistAssignments: incomingRoadAssignments,
+        ...restOfTech
+      } = {
         technicianId: externalId.toString(),
         technicianName: tech.technicianName || tech.name || tech.fullName || 'Unknown Technician',
         phoneNumber: tech.phoneNumber || tech.phone || tech.phone_number || '',
@@ -39,19 +59,47 @@ export const syncTechnicians = async () => {
         // Preserve any other fields from the API
         ...tech
       };
+
+      return {
+        ...restOfTech,
+        assignedTasks: incomingAssignedTasks ?? preservedAssignedTasks,
+        roadAssistAssignments: incomingRoadAssignments ?? preservedRoadAssignments
+      };
     });
 
-    // Clear existing technicians
-    await Technician.deleteMany({});
-    
-    // Insert all technicians
-    const result = await Technician.insertMany(processedTechs, { ordered: false });
+    if (!processedTechs.length) {
+      return {
+        success: true,
+        message: 'No technicians to sync',
+        count: 0
+      };
+    }
 
-    console.log(`Successfully synced ${result.length} technicians`);
+    // Upsert technicians to avoid wiping locally tracked assignments
+    const bulkOperations = processedTechs.map((tech) => ({
+      updateOne: {
+        filter: { technicianId: tech.technicianId },
+        update: {
+          $set: {
+            ...tech,
+            updatedAt: new Date()
+          },
+          $setOnInsert: {
+            createdAt: new Date()
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    const result = await Technician.bulkWrite(bulkOperations, { ordered: false });
+    const totalSynced = (result.upsertedCount || 0) + (result.modifiedCount || 0);
+
+    console.log(`Successfully synced ${totalSynced} technicians`);
     return {
       success: true,
-      message: `Successfully synced ${result.length} technicians`,
-      count: result.length
+      message: `Successfully synced ${totalSynced} technicians`,
+      count: totalSynced
     };
   } catch (error) {
     console.error('Error syncing technicians:', error.message);

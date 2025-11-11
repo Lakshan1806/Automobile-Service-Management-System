@@ -304,3 +304,73 @@ export async function getNewAppointments(req, res) {
     });
   }
 }
+
+
+/**
+ * Get appointments assigned to a specific technician
+ * GET /api/appointments/assigned/:technicianId
+ */
+export async function getAppointmentsForTechnician(req, res) {
+  try {
+    const technicianIdOrKey = req.params?.technicianId?.trim();
+
+    if (!technicianIdOrKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Technician ID is required',
+      });
+    }
+
+    const technicianIdsToMatch = new Set([technicianIdOrKey]);
+
+    const technicianQuery = [{ technicianId: technicianIdOrKey }];
+    if (mongoose.Types.ObjectId.isValid(technicianIdOrKey)) {
+      technicianQuery.push({ _id: technicianIdOrKey });
+    }
+    technicianQuery.push({ email: technicianIdOrKey });
+
+    const technicianRecord = await Technician.findOne({ $or: technicianQuery });
+    if (technicianRecord) {
+      if (technicianRecord.technicianId) {
+        technicianIdsToMatch.add(technicianRecord.technicianId);
+      }
+      if (technicianRecord._id) {
+        technicianIdsToMatch.add(technicianRecord._id.toString());
+      }
+      if (technicianRecord.employeeId) {
+        technicianIdsToMatch.add(String(technicianRecord.employeeId));
+      }
+    }
+
+    const matchIds = Array.from(technicianIdsToMatch).filter(Boolean);
+    const appointmentQuery = {
+      technicianId: { $in: matchIds },
+    };
+
+    if (technicianRecord?.technicianName) {
+      appointmentQuery.$or = [
+        { technicianId: { $in: matchIds } },
+        { technicianName: technicianRecord.technicianName },
+      ];
+      delete appointmentQuery.technicianId;
+    }
+
+    const technicianAppointments = await Appointment.find(appointmentQuery).sort({
+      suggested_started_date: 1,
+      createdAt: -1,
+    });
+
+    return res.json({
+      success: true,
+      count: technicianAppointments.length,
+      data: technicianAppointments,
+    });
+  } catch (error) {
+    console.error('Error fetching technician appointments:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch technician appointments',
+      error: error.message,
+    });
+  }
+}

@@ -28,6 +28,40 @@ export const getRoadAssists = async (req, res) => {
 };
 
 /**
+ * Get road assist appointments assigned to a specific technician
+ * @route GET /api/roadassists/assigned/:technicianId
+ */
+export const getRoadAssistsByTechnician = async (req, res) => {
+  try {
+    const technicianId = req.params?.technicianId?.trim();
+
+    if (!technicianId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Technician ID is required',
+      });
+    }
+
+    const roadAssists = await RoadAssist.find({
+      assignedTechnician: technicianId,
+    }).sort({ requestDate: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: roadAssists.length,
+      data: roadAssists,
+    });
+  } catch (error) {
+    console.error('Error fetching technician road assists:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch technician road assists',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Manually sync road assist data from external API
  * @route GET /api/roadassists/sync
  * @returns {Object} Result of the sync operation
@@ -149,6 +183,7 @@ export const syncRoadAssists = async (req, res) => {
 
 export default {
   getRoadAssists,
+  getRoadAssistsByTechnician,
   syncRoadAssists,
   assignTechnician
 };
