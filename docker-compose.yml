@@ -104,9 +104,6 @@ services:
       - "5000:5000"  
     env_file:
       - ./services/location-service/.env
-    stdin_open: true
-    tty: true
-    restart: unless-stopped
   # --- We are NOT running the frontend in Docker ---
 
 volumes:
