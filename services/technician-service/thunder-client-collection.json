@@ -1,0 +1,264 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "Technician Service - Complete Tests",
+  "collectionId": "technician-service-tests",
+  "dateExported": "2025-11-11",
+  "version": "1.0",
+  "folders": [
+    {
+      "name": "1. Setup & Health",
+      "requests": [
+        {
+          "name": "Health Check",
+          "method": "GET",
+          "url": "http://localhost:3016/",
+          "tests": [
+            {
+              "type": "res-body",
+              "value": "ok",
+              "compare": "contains"
+            }
+          ]
+        },
+        {
+          "name": "Fetch Services from Admin",
+          "method": "GET",
+          "url": "http://localhost:3016/api/services",
+          "tests": [
+            {
+              "type": "res-code",
+              "value": "200",
+              "compare": "equal"
+            }
+          ]
+        },
+        {
+          "name": "Fetch Products from Admin",
+          "method": "GET",
+          "url": "http://localhost:3016/api/parts",
+          "tests": [
+            {
+              "type": "res-code",
+              "value": "200",
+              "compare": "equal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Task Management",
+      "requests": [
+        {
+          "name": "Get Assigned Tasks",
+          "method": "GET",
+          "url": "http://localhost:3016/api/tasks?technicianId=TECH001",
+          "note": "Replace TECH001 with your technician ID"
+        },
+        {
+          "name": "Get Task by ID",
+          "method": "GET",
+          "url": "http://localhost:3016/api/tasks/{{task_id}}",
+          "note": "Replace {{task_id}} with actual task ID from previous response"
+        },
+        {
+          "name": "Update Task Status",
+          "method": "PUT",
+          "url": "http://localhost:3016/api/tasks/{{task_id}}",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"status\": \"in-progress\"\n}"
+          }
+        },
+        {
+          "name": "Add Progress to Task",
+          "method": "POST",
+          "url": "http://localhost:3016/api/tasks/{{task_id}}/progress",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"message\": \"Started work on vehicle inspection\"\n}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Worklog Operations",
+      "requests": [
+        {
+          "name": "Create Worklog",
+          "method": "POST",
+          "url": "http://localhost:3016/api/worklogs",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"task\": \"{{task_id}}\",\n  \"startTime\": \"2025-11-11T08:00:00Z\",\n  \"notes\": \"Starting work on oil change\"\n}"
+          },
+          "note": "Save the returned _id as {{worklog_id}}"
+        },
+        {
+          "name": "Add Service to Worklog",
+          "method": "POST",
+          "url": "http://localhost:3016/api/worklogs/{{worklog_id}}/service",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"serviceId\": 1\n}"
+          },
+          "note": "Check totalCost = 500"
+        },
+        {
+          "name": "Add Product 1 to Worklog",
+          "method": "POST",
+          "url": "http://localhost:3016/api/worklogs/{{worklog_id}}/products",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"productId\": 5,\n  \"quantityUsed\": 2\n}"
+          },
+          "note": "Check totalCost = 750, stock deducted"
+        },
+        {
+          "name": "Add Product 2 to Worklog",
+          "method": "POST",
+          "url": "http://localhost:3016/api/worklogs/{{worklog_id}}/products",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"productId\": 6,\n  \"quantityUsed\": 1\n}"
+          },
+          "note": "Check totalCost = 1100"
+        },
+        {
+          "name": "Get Worklog Details",
+          "method": "GET",
+          "url": "http://localhost:3016/api/worklogs/{{worklog_id}}"
+        },
+        {
+          "name": "Get All Worklogs for Task",
+          "method": "GET",
+          "url": "http://localhost:3016/api/worklogs/task/{{task_id}}"
+        },
+        {
+          "name": "Complete Worklog",
+          "method": "PUT",
+          "url": "http://localhost:3016/api/worklogs/{{worklog_id}}",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"endTime\": \"2025-11-11T10:30:00Z\",\n  \"notes\": \"Oil change completed successfully\"\n}"
+          },
+          "note": "Check duration = 150 minutes"
+        }
+      ]
+    },
+    {
+      "name": "4. Error Cases",
+      "requests": [
+        {
+          "name": "Test Insufficient Stock Error",
+          "method": "POST",
+          "url": "http://localhost:3016/api/worklogs/{{worklog_id}}/products",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"productId\": 5,\n  \"quantityUsed\": 1000\n}"
+          },
+          "note": "Should return error: Insufficient stock"
+        },
+        {
+          "name": "Test Invalid Service ID",
+          "method": "POST",
+          "url": "http://localhost:3016/api/worklogs/{{worklog_id}}/service",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"serviceId\": 99999\n}"
+          },
+          "note": "Should return error: Service not found"
+        }
+      ]
+    },
+    {
+      "name": "5. Appointments",
+      "requests": [
+        {
+          "name": "Create Appointment",
+          "method": "POST",
+          "url": "http://localhost:3016/api/appointments",
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "type": "json",
+            "raw": "{\n  \"customer\": {\n    \"name\": \"Jane Smith\",\n    \"phone\": \"+1987654321\",\n    \"email\": \"jane@example.com\"\n  },\n  \"vehicle\": {\n    \"make\": \"Honda\",\n    \"model\": \"Civic\",\n    \"year\": 2021,\n    \"vin\": \"1HGBH41JXMN109186\",\n    \"licensePlate\": \"ABC-5678\"\n  },\n  \"appointmentDate\": \"2025-11-20\",\n  \"appointmentTime\": \"10:00 AM\",\n  \"serviceType\": \"Brake Repair\",\n  \"status\": \"scheduled\"\n}"
+          }
+        },
+        {
+          "name": "Get All Appointments",
+          "method": "GET",
+          "url": "http://localhost:3016/api/appointments"
+        },
+        {
+          "name": "Get Today's Appointments",
+          "method": "GET",
+          "url": "http://localhost:3016/api/appointments/today"
+        },
+        {
+          "name": "Get Upcoming Appointments",
+          "method": "GET",
+          "url": "http://localhost:3016/api/appointments/upcoming"
+        }
+      ]
+    }
+  ]
+}
