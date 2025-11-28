@@ -1,4 +1,3 @@
-
 services:
   # --- 1. Database (Postgres) ---
   postgres-db:
@@ -8,7 +7,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${DB_SECRET_PASSWORD}
     ports:
-      - "5433:5432" 
+      - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
@@ -19,7 +18,18 @@ services:
       - "27018:27017"
     volumes:
       - mongo-data:/data/db
-  
+
+  # --- 2b. Database (MySQL for admin service) ---
+  mysql-db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${ADMIN_DB_ROOT_PASSWORD:-1234}
+      - MYSQL_DATABASE=enterprise_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
   # --- 3. Kafka ---
   kafka:
     image: apache/kafka:4.1.0
@@ -61,12 +71,12 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - MONGO_URI=mongodb://mongo-db:27017/CustomerDB 
+      - MONGO_URI=mongodb://mongo-db:27017/CustomerDB
       - AUTH_SERVICE_URL=http://auth-service:9000
       - AUTH_SERVICE_TIMEOUT_MS=5000
     depends_on:
       - auth-service
-      - mongo-db 
+      - mongo-db
 
   # --- 6. Prediction Service (FastAPI) ---
   prediction-service:
@@ -102,46 +112,30 @@ services:
     build:
       context: ./services/location-service
     ports:
-      - "5010:5010"  
+      - "5010:5010"
     env_file:
       - ./services/location-service/.env
-  # --- We are NOT running the frontend in Docker ---
 
-  #   # --- 9. Admin Service (Django) ---
-  # admin-service:
-  #   build:
-  #     context: ./services/admin_service
-  #   ports:
-  #     - "8000:8000"  
-      
-  #   env_file:
-  #   - ./services/admin_service/.env   # <— load vars from this file
-  #              # same external port as your local run
-  #   environment:
-  #     # Django basics
-  #     - DJANGO_DEBUG=1
-  #     - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-devsecret}
-  #     - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,admin-service
-
-  #     # DB selection (leave as sqlite to avoid changing behavior)
-  #     - DB_ENGINE=${DB_ENGINE:-sqlite}   # sqlite | postgres | mysql
-  #     - DB_NAME=${DB_NAME:-/app/db.sqlite3}
-  #     - DB_HOST=${DB_HOST:-}
-  #     - DB_PORT=${DB_PORT:-}
-  #     - DB_USER=${DB_USER:-}
-  #     - DB_PASSWORD=${DB_PASSWORD:-}
-
-  #     # Example of talking to other containers by service name (if needed later)
-  #     - AUTH_SERVICE_URL=http://auth-service:9000
-  #     - USER_SERVICE_URL=http://user-service:5001
-  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-  #   depends_on:
-  #     - kafka
-  #     - postgres-db
-  #     - mongo-db
-  #   volumes:
-  #     - ./services/admin_service:/app  # hot-reload: edit code on host, container updates
+  # --- 9. Admin Service (Django) ---
+  admin-service:
+    build:
+      context: ./services/admin_service
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./services/admin_service/.env
+    environment:
+      - DB_HOST=mysql-db
+      - DB_PORT=3306
+    depends_on:
+      - mysql-db
+      - kafka
+      - postgres-db
+      - mongo-db
+    volumes:
+      - ./services/admin_service:/app  # hot-reload: edit code on host, container updates
 
 volumes:
   postgres-data:
-  mongo-data: 
+  mongo-data:
+  mysql-data:
