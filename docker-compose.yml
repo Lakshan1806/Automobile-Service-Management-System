@@ -133,7 +133,7 @@ services:
       - postgres-db
       - mongo-db
     volumes:
-      - ./services/admin_service:/app  # hot-reload: edit code on host, container updates
+      - ./services/admin_service:/app
 
 volumes:
   postgres-data:
