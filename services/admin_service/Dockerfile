@@ -5,7 +5,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DEFAULT_TIMEOUT=120
 
 # + pkg-config + default-libmysqlclient-dev to build mysqlclient
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,7 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements.txt /app/
-RUN python -m pip install --upgrade pip && pip install -r requirements.txt
+RUN python -m pip install --upgrade pip \
+    && python -m pip install --progress-bar off --default-timeout=120 --retries=5 -r requirements.txt
 
 COPY . /app
 

@@ -3,10 +3,14 @@
 FROM python:3.11-slim
 WORKDIR /app
 
+# Speed up flaky network installs during image build
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=120
+
 # Copy the requirements file and install dependencies
 # This is also optimized. It only re-installs if requirements.txt changes.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --progress-bar off --default-timeout=120 --retries=5 -r requirements.txt
 
 # Copy the rest of your application code into the container
 # This includes your .py files, .env, and your .joblib model file
