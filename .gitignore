@@ -17,3 +17,5 @@ services/payment-service/appsettings.*.local.json
 # Crash logs from local test runs
 hs_err_pid*.log
 replay_pid*.log
+
+

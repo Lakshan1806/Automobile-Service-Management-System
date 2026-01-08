@@ -1,0 +1,41 @@
+spring.application.name=authservice
+
+# Database
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/ead_database}
+spring.datasource.username=${DB_USERNAME:postgres}
+spring.datasource.password=${DB_PASSWORD:change-me}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# Server
+server.port=9000
+app.jwt.issuer=${APP_JWT_ISSUER:http://localhost:9000}
+app.jwt.audience=${APP_JWT_AUDIENCE:myco-apis}
+app.jwt.ttl=${APP_JWT_TTL:30m}
+app.jwt.key-size=${APP_JWT_KEY_SIZE:4096}
+app.jwt.max-published-keys=${APP_JWT_MAX_PUBLISHED_KEYS:2}
+
+app.user-service.base-url=${USER_SERVICE_BASE_URL:http://localhost:5001}
+
+# Comma-separated list of origins allowed to call this service (used by CorsConfiguration)
+app.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+spring.mail.host=${MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME:you@example.com}
+spring.mail.password=${MAIL_PASSWORD:your-app-password}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+app.admin.bootstrap-enabled=${ADMIN_BOOTSTRAP_ENABLED:true}
+app.admin.email=${ADMIN_EMAIL:admin@example.com}
+app.admin.mail-from=${ADMIN_MAIL_FROM:no-reply@example.com}
+app.admin.password-length=${ADMIN_PASSWORD_LENGTH:16}
+
+# Optional cookie settings if enabling auth cookies
+#app.jwt.cookie-same-site=None
+#app.jwt.cookie-secure=true
+#app.jwt.cookie-domain=localhost

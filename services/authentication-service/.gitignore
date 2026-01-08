@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Authentication-service local config
+src/main/resources/application.properties
