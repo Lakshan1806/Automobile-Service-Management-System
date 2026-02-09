@@ -2,7 +2,7 @@
 /mock-back/
 .DS_Store
 .vscode
-
+.env
 
 # Payment-service local artifacts
 services/payment-service/bin/
